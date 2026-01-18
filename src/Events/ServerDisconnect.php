@@ -27,7 +27,7 @@ use ScienceStories\Mqtt\Protocol\Packet\Disconnect;
  * $dispatcher->addListener(ServerDisconnect::class, function (ServerDisconnect $event) {
  *     $disconnect = $event->disconnect;
  *
- *     if ($disconnect->isError()) {
+ *     If ($disconnect->isError()) {
  *         echo "Server disconnected due to error: " . $disconnect->getReasonDescription();
  *
  *         // Check for server reference (alternative server)

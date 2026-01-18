@@ -97,7 +97,7 @@ try {
         echo "Topic aliases are disabled for this connection.\n\n";
     }
 
-    $aliasManager = $client->getTopicAliasManager();
+    $aliasManager = $client->topicAliasManager;
     if ($aliasManager === null) {
         echo "Topic Alias Manager not initialized (broker may not support topic aliases).\n";
     }

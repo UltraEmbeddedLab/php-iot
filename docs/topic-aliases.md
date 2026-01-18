@@ -59,7 +59,7 @@ $client->publish('sensors/device1/temperature', '23.0');
 
 ```php
 // Get the manager from the client (after connect)
-$manager = $client->getTopicAliasManager();
+$manager = $client->topicAliasManager;
 
 // Check current status
 $count = $manager->getAliasCount();      // Number of aliases used

@@ -93,7 +93,7 @@ try {
     $brokerMax = $result->connack->properties['receive_maximum'] ?? 65535;
     echo "   Broker Receive Maximum: {$brokerMax}\n\n";
 
-    $flowControl = $client->getFlowControl();
+    $flowControl = $client->flowControl;
     if ($flowControl === null) {
         echo "Flow Control not initialized.\n";
     } else {

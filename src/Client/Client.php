@@ -39,6 +39,24 @@ use ScienceStories\Mqtt\Util\RandomId;
 use SplQueue;
 use Throwable;
 
+use function array_any;
+use function array_keys;
+use function array_shift;
+use function bin2hex;
+use function chunk_split;
+use function explode;
+use function floor;
+use function max;
+use function microtime;
+use function mt_getrandmax;
+use function mt_rand;
+use function pack;
+use function strtoupper;
+use function substr;
+use function time;
+use function trim;
+use function usleep;
+
 /**
  * Client supporting CONNECT/DISCONNECT, PUBLISH QoS0 and basic SUBSCRIBE/receive for MQTT 3.1.1 and 5.0.
  */
@@ -114,7 +132,7 @@ final class Client implements ClientInterface
     private function sendPingReq(): void
     {
         // Build PINGREQ without awaiting response; loopOnce() or ping() will handle PINGRESP
-        $pkt = \chr(PacketType::PINGREQ->value << 4). \chr(0);
+        $pkt = \chr(PacketType::PINGREQ->value << 4) . \chr(0);
         $this->logger->debug('>> PINGREQ (auto)');
         $this->transport->write($pkt);
         $this->pingOutstanding = true;
@@ -294,7 +312,7 @@ final class Client implements ClientInterface
         }
 
         // DISCONNECT fixed header: type 14, flags 0, length 0
-        $packet = \chr(PacketType::DISCONNECT->value << 4). \chr(0);
+        $packet = \chr(PacketType::DISCONNECT->value << 4) . \chr(0);
         $this->logger->debug('>> DISCONNECT');
         $this->transport->write($packet);
 
@@ -456,7 +474,7 @@ final class Client implements ClientInterface
         if (! $this->transport->isOpen()) {
             throw new LogicException('Cannot PING: transport not open');
         }
-        $pkt = \chr(PacketType::PINGREQ->value << 4). \chr(0);
+        $pkt = \chr(PacketType::PINGREQ->value << 4) . \chr(0);
         $this->logger->debug('>> PINGREQ');
         $this->transport->write($pkt);
         $this->pingOutstanding = true;
@@ -618,7 +636,7 @@ final class Client implements ClientInterface
                 $msg = $this->decoder->decodePublish($flags, $body);
                 // QoS1: immediately acknowledge with PUBACK (v3/v5 minimal form)
                 if ($msg->qos->value === 1 && $msg->packetId !== null) {
-                    $puback = \chr(PacketType::PUBACK->value << 4). \chr(2).pack('n', $msg->packetId);
+                    $puback = \chr(PacketType::PUBACK->value << 4) . \chr(2) . pack('n', $msg->packetId);
                     $this->logger->debug('>> PUBACK', ['packetId' => $msg->packetId]);
                     $this->transport->write($puback);
                     $this->touchActivity();
@@ -644,7 +662,7 @@ final class Client implements ClientInterface
                 if ($msg->qos->value === 2 && $msg->packetId !== null) {
                     // If duplicate PUBLISH (a DUP flag may be set), resend PUBREC but do not duplicate store
                     $pid    = $msg->packetId;
-                    $pubrec = \chr(PacketType::PUBREC->value << 4). \chr(2).pack('n', $pid);
+                    $pubrec = \chr(PacketType::PUBREC->value << 4) . \chr(2) . pack('n', $pid);
                     $this->logger->debug('>> PUBREC', ['packetId' => $pid]);
                     $this->transport->write($pubrec);
                     $this->touchActivity();
@@ -704,7 +722,7 @@ final class Client implements ClientInterface
                     'success'    => $pubrel->isSuccess(),
                 ]);
                 // Send PUBCOMP response
-                $pubcomp = \chr(PacketType::PUBCOMP->value << 4). \chr(2).pack('n', $pid);
+                $pubcomp = \chr(PacketType::PUBCOMP->value << 4) . \chr(2) . pack('n', $pid);
                 $this->logger->debug('>> PUBCOMP', ['packetId' => $pid]);
                 $this->transport->write($pubcomp);
                 $this->touchActivity();
@@ -728,7 +746,7 @@ final class Client implements ClientInterface
                     'success'    => $pubrec->isSuccess(),
                 ]);
                 // Send PUBREL response (flags 0x02)
-                $pubrel = \chr((PacketType::PUBREL->value << 4) | 0x02). \chr(2).pack('n', $pid);
+                $pubrel = \chr((PacketType::PUBREL->value << 4) | 0x02) . \chr(2) . pack('n', $pid);
                 $this->logger->debug('>> PUBREL', ['packetId' => $pid]);
                 $this->transport->write($pubrel);
                 $this->touchActivity();
@@ -976,7 +994,7 @@ final class Client implements ClientInterface
         $s   = substr($bytes, 0, 64);
         $hex = strtoupper(bin2hex($s));
 
-        return trim(chunk_split($hex, 2, ' ')).(\strlen($bytes) > 64 ? ' …' : '');
+        return trim(chunk_split($hex, 2, ' ')) . (\strlen($bytes) > 64 ? ' …' : '');
     }
 
     private function deliverIfMatches(InboundMessage $msg): void

@@ -58,7 +58,7 @@ Flow control tracks:
 
 ```php
 // Get the flow control manager from the client (after connect)
-$flow = $client->getFlowControl();
+$flow = $client->flowControl;
 
 // Check current status
 $inFlight = $flow->getInFlightCount();  // Current in-flight messages
