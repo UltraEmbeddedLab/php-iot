@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace ScienceStories\Mqtt\Protocol\Packet;
 
-use function is_string;
-
 /**
  * PUBCOMP packet model for MQTT 3.1.1 and 5.0.
  *
@@ -125,7 +123,7 @@ final class PubComp
     {
         $val = $this->getProperty('reason_string');
 
-        return is_string($val) ? $val : null;
+        return \is_string($val) ? $val : null;
     }
 
     /**
@@ -143,7 +141,7 @@ final class PubComp
 
         // Ensure all keys and values are strings for type safety
         return array_filter($val, function ($value, $key) {
-            return is_string($key) && is_string($value);
+            return \is_string($key) && \is_string($value);
         }, ARRAY_FILTER_USE_BOTH);
     }
 }

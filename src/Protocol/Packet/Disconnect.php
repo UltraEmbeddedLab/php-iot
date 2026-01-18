@@ -5,9 +5,6 @@ declare(strict_types=1);
 namespace ScienceStories\Mqtt\Protocol\Packet;
 
 use ScienceStories\Mqtt\Protocol\MqttVersion;
-use function is_array;
-use function is_int;
-use function is_string;
 
 /**
  * MQTT DISCONNECT packet model for MQTT 3.1.1 and 5.0.
@@ -217,7 +214,7 @@ final class Disconnect
     {
         $val = $this->getProperty('reason_string');
 
-        return is_string($val) ? $val : null;
+        return \is_string($val) ? $val : null;
     }
 
     /**
@@ -229,13 +226,13 @@ final class Disconnect
     {
         $val = $this->getProperty('user_properties');
 
-        if (! is_array($val)) {
+        if (! \is_array($val)) {
             return [];
         }
 
         // Ensure all keys and values are strings for type safety
         return array_filter($val, function ($value, $key) {
-            return is_string($key) && is_string($value);
+            return \is_string($key) && \is_string($value);
         }, ARRAY_FILTER_USE_BOTH);
     }
 
@@ -247,7 +244,7 @@ final class Disconnect
     {
         $val = $this->getProperty('server_reference');
 
-        return is_string($val) ? $val : null;
+        return \is_string($val) ? $val : null;
     }
 
     /**
@@ -258,6 +255,6 @@ final class Disconnect
     {
         $val = $this->getProperty('session_expiry_interval');
 
-        return is_int($val) ? $val : null;
+        return \is_int($val) ? $val : null;
     }
 }

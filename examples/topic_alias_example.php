@@ -86,7 +86,7 @@ try {
     }
 
     echo "Connected to MQTT 5.0 broker\n";
-    echo "   Session Present: ".($result->sessionPresent ? 'yes' : 'no')."\n";
+    echo '   Session Present: '.($result->sessionPresent ? 'yes' : 'no')."\n";
 
     // Check broker's topic alias maximum
     $brokerMax = $result->connack->properties['topic_alias_maximum'] ?? 0;
@@ -113,7 +113,7 @@ try {
 
     if ($aliasManager !== null) {
         $alias = $aliasManager->getAlias($topic);
-        echo "   Alias assigned: ".($alias ?? 'none')."\n";
+        echo '   Alias assigned: '.($alias ?? 'none')."\n";
         echo "   Total aliases used: {$aliasManager->getAliasCount()}/{$aliasManager->getMaxAliases()}\n\n";
     }
 
@@ -140,14 +140,14 @@ try {
         $client->publish($t, '42.0', new PublishOptions(qos: QoS::AtMostOnce));
 
         if ($aliasManager !== null) {
-            echo "   Alias: ".($aliasManager->getAlias($t) ?? 'none')."\n";
+            echo '   Alias: '.($aliasManager->getAlias($t) ?? 'none')."\n";
         }
     }
 
     if ($aliasManager !== null) {
         echo "\nFinal alias status:\n";
         echo "   Total aliases used: {$aliasManager->getAliasCount()}/{$aliasManager->getMaxAliases()}\n";
-        echo "   Available slots: ".($aliasManager->hasAvailableSlots() ? 'yes' : 'no')."\n";
+        echo '   Available slots: '.($aliasManager->hasAvailableSlots() ? 'yes' : 'no')."\n";
     }
 
     echo "\nSummary:\n";

@@ -85,7 +85,7 @@ final class TopicAliasManager
         }
 
         // Create new alias
-        $alias = $this->nextAlias++;
+        $alias                      = $this->nextAlias++;
         $this->topicToAlias[$topic] = $alias;
         $this->aliasToTopic[$alias] = $topic;
 
@@ -142,7 +142,7 @@ final class TopicAliasManager
     {
         $this->topicToAlias = [];
         $this->aliasToTopic = [];
-        $this->nextAlias = 1;
+        $this->nextAlias    = 1;
     }
 
     /**
@@ -150,7 +150,7 @@ final class TopicAliasManager
      */
     public function getAliasCount(): int
     {
-        return count($this->topicToAlias);
+        return \count($this->topicToAlias);
     }
 
     /**

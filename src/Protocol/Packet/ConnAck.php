@@ -5,9 +5,6 @@ declare(strict_types=1);
 namespace ScienceStories\Mqtt\Protocol\Packet;
 
 use ScienceStories\Mqtt\Protocol\MqttVersion;
-use function is_array;
-use function is_int;
-use function is_string;
 
 /**
  * CONNACK packet model for MQTT 3.1.1 and 5.0.
@@ -137,7 +134,7 @@ final class ConnAck
      */
     public function getReasonDescription(MqttVersion|string $version): string
     {
-        if (is_string($version)) {
+        if (\is_string($version)) {
             $version = $version === '5.0' ? MqttVersion::V5_0 : MqttVersion::V3_1_1;
         }
 
@@ -174,7 +171,7 @@ final class ConnAck
     {
         $val = $this->getProperty('server_keep_alive');
 
-        return is_int($val) ? $val : null;
+        return \is_int($val) ? $val : null;
     }
 
     /**
@@ -185,7 +182,7 @@ final class ConnAck
     {
         $val = $this->getProperty('assigned_client_identifier');
 
-        return is_string($val) ? $val : null;
+        return \is_string($val) ? $val : null;
     }
 
     /**
@@ -196,7 +193,7 @@ final class ConnAck
     {
         $val = $this->getProperty('reason_string');
 
-        return is_string($val) ? $val : null;
+        return \is_string($val) ? $val : null;
     }
 
     /**
@@ -207,7 +204,7 @@ final class ConnAck
     {
         $val = $this->getProperty('maximum_qos');
 
-        return is_int($val) ? $val : null;
+        return \is_int($val) ? $val : null;
     }
 
     /**
@@ -231,7 +228,7 @@ final class ConnAck
     {
         $val = $this->getProperty('maximum_packet_size');
 
-        return is_int($val) ? $val : null;
+        return \is_int($val) ? $val : null;
     }
 
     /**
@@ -242,7 +239,7 @@ final class ConnAck
     {
         $val = $this->getProperty('receive_maximum');
 
-        return is_int($val) ? $val : null;
+        return \is_int($val) ? $val : null;
     }
 
     /**
@@ -253,7 +250,7 @@ final class ConnAck
     {
         $val = $this->getProperty('topic_alias_maximum');
 
-        return is_int($val) ? $val : null;
+        return \is_int($val) ? $val : null;
     }
 
     /**
@@ -265,13 +262,13 @@ final class ConnAck
     {
         $val = $this->getProperty('user_properties');
 
-        if (! is_array($val)) {
+        if (! \is_array($val)) {
             return [];
         }
 
         // Ensure all keys and values are strings for type safety
         return array_filter($val, function ($value, $key) {
-            return is_string($key) && is_string($value);
+            return \is_string($key) && \is_string($value);
         }, ARRAY_FILTER_USE_BOTH);
     }
 
@@ -325,7 +322,7 @@ final class ConnAck
     {
         $val = $this->getProperty('response_information');
 
-        return is_string($val) ? $val : null;
+        return \is_string($val) ? $val : null;
     }
 
     /**
@@ -336,6 +333,6 @@ final class ConnAck
     {
         $val = $this->getProperty('server_reference');
 
-        return is_string($val) ? $val : null;
+        return \is_string($val) ? $val : null;
     }
 }

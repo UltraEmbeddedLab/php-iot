@@ -7,11 +7,9 @@ namespace ScienceStories\Mqtt\Session;
 use RuntimeException;
 use ScienceStories\Mqtt\Contract\SessionStoreInterface;
 
-use function dirname;
 use function file_exists;
 use function file_get_contents;
 use function file_put_contents;
-use function is_array;
 use function is_dir;
 use function is_writable;
 use function json_decode;
@@ -71,7 +69,7 @@ final class FileSessionStore implements SessionStoreInterface
      */
     public function __construct(string $directory, int $defaultExpirySeconds = 0)
     {
-        $this->directory = rtrim($directory, '/\\');
+        $this->directory            = rtrim($directory, '/\\');
         $this->defaultExpirySeconds = max(0, $defaultExpirySeconds);
         $this->ensureDirectory();
     }
@@ -106,7 +104,7 @@ final class FileSessionStore implements SessionStoreInterface
             return null;
         }
 
-        if (! is_array($data)) {
+        if (! \is_array($data)) {
             return null;
         }
 
@@ -220,7 +218,7 @@ final class FileSessionStore implements SessionStoreInterface
         }
 
         $removed = 0;
-        $files = glob($this->directory.'/*.json');
+        $files   = glob($this->directory.'/*.json');
 
         if ($files === false) {
             return 0;
@@ -234,7 +232,7 @@ final class FileSessionStore implements SessionStoreInterface
 
             try {
                 $data = json_decode($contents, true, 512, JSON_THROW_ON_ERROR);
-                if (! is_array($data)) {
+                if (! \is_array($data)) {
                     continue;
                 }
 

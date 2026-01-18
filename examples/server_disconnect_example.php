@@ -3,7 +3,6 @@
 declare(strict_types=1);
 
 use Psr\EventDispatcher\EventDispatcherInterface;
-use Psr\EventDispatcher\ListenerProviderInterface;
 use Psr\EventDispatcher\StoppableEventInterface;
 use Random\RandomException;
 use ScienceStories\Mqtt\Client\Client;
@@ -88,11 +87,11 @@ $eventDispatcher->addListener(ServerDisconnect::class, function (ServerDisconnec
     echo "\n========================================\n";
     echo "SERVER DISCONNECT EVENT RECEIVED\n";
     echo "========================================\n";
-    echo "   Reason Code: 0x".dechex($disconnect->reasonCode)." ({$disconnect->reasonCode})\n";
+    echo '   Reason Code: 0x'.dechex($disconnect->reasonCode)." ({$disconnect->reasonCode})\n";
     echo "   Description: {$disconnect->getReasonDescription()}\n";
-    echo "   Is Error: ".($disconnect->isError() ? 'yes' : 'no')."\n";
-    echo "   Is Normal: ".($disconnect->isNormal() ? 'yes' : 'no')."\n";
-    echo "   Will Reconnect: ".($event->willReconnect ? 'yes' : 'no')."\n";
+    echo '   Is Error: '.($disconnect->isError() ? 'yes' : 'no')."\n";
+    echo '   Is Normal: '.($disconnect->isNormal() ? 'yes' : 'no')."\n";
+    echo '   Will Reconnect: '.($event->willReconnect ? 'yes' : 'no')."\n";
 
     // Check for reason string
     $reasonString = $disconnect->getReasonString();
@@ -187,7 +186,7 @@ try {
     }
 
     echo "Connected to MQTT 5.0 broker\n";
-    echo "   Session Present: ".($result->sessionPresent ? 'yes' : 'no')."\n\n";
+    echo '   Session Present: '.($result->sessionPresent ? 'yes' : 'no')."\n\n";
 
     echo "Subscribing to test topic...\n";
     $client->subscribe(['test/server-disconnect/#'], qos: 1);

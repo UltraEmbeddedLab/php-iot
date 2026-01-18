@@ -92,11 +92,11 @@ try {
     }
 
     echo "Connected to MQTT 5.0 broker\n";
-    echo "   Session Present: ".($result->sessionPresent ? 'yes' : 'no')."\n";
+    echo '   Session Present: '.($result->sessionPresent ? 'yes' : 'no')."\n";
 
     // Check if broker supports shared subscriptions
     $sharedSupported = $result->connack->properties['shared_subscription_available'] ?? 1;
-    echo "   Shared Subscriptions Available: ".($sharedSupported ? 'yes' : 'no')."\n\n";
+    echo '   Shared Subscriptions Available: '.($sharedSupported ? 'yes' : 'no')."\n\n";
 
     if (! $sharedSupported) {
         echo "This broker does not support shared subscriptions.\n";

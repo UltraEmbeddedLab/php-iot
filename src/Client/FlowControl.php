@@ -136,7 +136,7 @@ final class FlowControl
      */
     public function getTimedOutPackets(float $timeoutSeconds): array
     {
-        $now = microtime(true);
+        $now      = microtime(true);
         $timedOut = [];
 
         foreach ($this->pending as $packetId => $sendTime) {
@@ -154,7 +154,7 @@ final class FlowControl
      */
     public function reset(): void
     {
-        $this->pending = [];
+        $this->pending         = [];
         $this->currentInFlight = 0;
     }
 

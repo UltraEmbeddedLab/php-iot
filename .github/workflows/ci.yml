@@ -137,4 +137,4 @@ jobs:
         run: composer install --prefer-dist --no-interaction --no-progress
 
       - name: Check type coverage
-        run: composer type-coverage
+        run: php -d memory_limit=512M vendor/bin/pest --type-coverage

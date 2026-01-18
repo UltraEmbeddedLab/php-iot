@@ -79,7 +79,7 @@ final class SessionState
      */
     public function hasSubscriptions(): bool
     {
-        return count($this->subscriptions) > 0;
+        return \count($this->subscriptions) > 0;
     }
 
     /**
@@ -87,7 +87,7 @@ final class SessionState
      */
     public function hasPendingQos2(): bool
     {
-        return count($this->pendingQos2) > 0;
+        return \count($this->pendingQos2) > 0;
     }
 
     /**
@@ -95,7 +95,7 @@ final class SessionState
      */
     public function getSubscriptionCount(): int
     {
-        return count($this->subscriptions);
+        return \count($this->subscriptions);
     }
 
     /**
@@ -107,8 +107,8 @@ final class SessionState
     {
         return [
             'subscriptions' => $this->subscriptions,
-            'pending_qos2' => $this->pendingQos2,
-            'saved_at' => $this->savedAt,
+            'pending_qos2'  => $this->pendingQos2,
+            'saved_at'      => $this->savedAt,
         ];
     }
 

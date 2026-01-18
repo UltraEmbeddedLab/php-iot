@@ -87,7 +87,7 @@ try {
     }
 
     echo "Connected to MQTT 5.0 broker\n";
-    echo "   Session Present: ".($result->sessionPresent ? 'yes' : 'no')."\n";
+    echo '   Session Present: '.($result->sessionPresent ? 'yes' : 'no')."\n";
 
     // Check broker's receive maximum
     $brokerMax = $result->connack->properties['receive_maximum'] ?? 65535;
@@ -117,7 +117,7 @@ try {
 
         if ($flowControl !== null) {
             echo "   In-flight before: {$flowControl->getInFlightCount()}/{$flowControl->getMaxInFlight()}\n";
-            echo "   Can send: ".($flowControl->canSend() ? 'yes' : 'no')."\n";
+            echo '   Can send: '.($flowControl->canSend() ? 'yes' : 'no')."\n";
         }
 
         $packetId = $client->publish($topic, $payload, new PublishOptions(qos: QoS::AtLeastOnce));

@@ -15,7 +15,6 @@ use ScienceStories\Mqtt\Protocol\MqttVersion;
 use ScienceStories\Mqtt\Protocol\QoS;
 use ScienceStories\Mqtt\Transport\TcpTransport;
 use ScienceStories\Mqtt\Util\RandomId;
-use function sprintf;
 
 final class Mqtt
 {
@@ -179,7 +178,7 @@ final class Mqtt
         // Broker accepted validate connection
         if ($result->reasonCode !== 0) {
             throw new RuntimeException(
-                sprintf(
+                \sprintf(
                     'MQTT connection refused by broker %s:%d (reason code: %d)',
                     $host,
                     $port,

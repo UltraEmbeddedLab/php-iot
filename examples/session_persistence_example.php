@@ -2,13 +2,11 @@
 
 declare(strict_types=1);
 
-use Random\RandomException;
 use ScienceStories\Mqtt\Client\Client;
 use ScienceStories\Mqtt\Client\Options;
 use ScienceStories\Mqtt\Protocol\MqttVersion;
 use ScienceStories\Mqtt\Session\FileSessionStore;
 use ScienceStories\Mqtt\Transport\TcpTransport;
-use ScienceStories\Mqtt\Util\RandomId;
 
 require __DIR__.'/../vendor/autoload.php';
 
@@ -58,7 +56,7 @@ if ($sessionStore->exists($clientId)) {
         echo "Found existing session for '{$clientId}':\n";
         echo "   Subscriptions: {$state->getSubscriptionCount()}\n";
         echo "   Age: {$state->getAge()} seconds\n";
-        echo "   Saved at: ".date('Y-m-d H:i:s', $state->savedAt)."\n\n";
+        echo '   Saved at: '.date('Y-m-d H:i:s', $state->savedAt)."\n\n";
     }
 } else {
     echo "No existing session found for '{$clientId}'.\n";
@@ -108,7 +106,7 @@ try {
     }
 
     echo "Connected to MQTT broker\n";
-    echo "   Session Present: ".($result->sessionPresent ? 'yes' : 'no')."\n\n";
+    echo '   Session Present: '.($result->sessionPresent ? 'yes' : 'no')."\n\n";
 
     if ($result->sessionPresent) {
         echo "Broker has an existing session for this client.\n";
