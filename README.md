@@ -1,9 +1,9 @@
 # PHP IoT MQTT Client
 
 [![CI](https://github.com/UltraEmbeddedLab/php-iot/actions/workflows/ci.yml/badge.svg)](https://github.com/UltraEmbeddedLab/php-iot/actions/workflows/ci.yml)
-[![Latest Stable Version](https://poser.pugx.org/science-stories/php-iot/v)](https://packagist.org/packages/science-stories/php-iot)
-[![License](https://poser.pugx.org/science-stories/php-iot/license)](https://packagist.org/packages/science-stories/php-iot)
-[![PHP Version](https://img.shields.io/packagist/php-v/science-stories/php-iot)](https://packagist.org/packages/science-stories/php-iot)
+[![Latest Stable Version](https://poser.pugx.org/ultraembeddedlab/php-iot/v)](https://packagist.org/packages/ultraembeddedlab/php-iot)
+[![License](https://poser.pugx.org/ultraembeddedlab/php-iot/license)](https://packagist.org/packages/ultraembeddedlab/php-iot)
+[![PHP Version](https://img.shields.io/packagist/php-v/ultraembeddedlab/php-iot)](https://packagist.org/packages/ultraembeddedlab/php-iot)
 
 Modern, production-grade MQTT 3.1.1 & 5.0 client for PHP 8.4+
 
@@ -32,7 +32,7 @@ Modern, production-grade MQTT 3.1.1 & 5.0 client for PHP 8.4+
 Install via Composer:
 
 ```bash
-composer require science-stories/php-iot
+composer require ultraembeddedlab/php-iot
 ```
 
 ## Quick Start
