@@ -1,0 +1,66 @@
+{
+  "name": "science-stories/php-iot",
+  "description": "Modern, production-grade MQTT 3.1.1 & 5 client for PHP 8.4+",
+  "type": "library",
+  "license": "MIT",
+  "keywords": ["mqtt", "mqtt5", "mqtt3", "iot", "client", "php8.4", "networking", "pub-sub", "message-broker"],
+  "homepage": "https://github.com/UltraEmbeddedLab/php-iot",
+  "authors": [
+    {
+      "name": "Bogdan Gewald",
+      "email": "gewaldb@gmail.com",
+      "homepage": "https://github.com/UltraEmbeddedLab",
+      "role": "Developer"
+    }
+  ],
+  "support": {
+    "issues": "https://github.com/UltraEmbeddedLab/php-iot/issues",
+    "source": "https://github.com/UltraEmbeddedLab/php-iot"
+  },
+  "require": {
+    "php": "^8.4",
+    "ext-sockets": "*",
+    "psr/log": "^3.0.2",
+    "psr/event-dispatcher": "^1.0"
+  },
+  "suggest": {
+    "ext-openssl": "Required for TLS/SSL connections"
+  },
+  "require-dev": {
+    "pestphp/pest": "^v4.3.1",
+    "pestphp/pest-plugin-type-coverage": "^v4.0.3",
+    "phpstan/phpstan": "^2.1.33",
+    "laravel/pint": "^v1.27.0",
+    "rector/rector": "^2.3.1",
+    "symfony/var-dumper": "^v7.4.3",
+    "vlucas/phpdotenv": "^v5.6.3"
+  },
+  "autoload": {
+    "psr-4": {
+      "ScienceStories\\Mqtt\\": "src/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "ScienceStories\\Mqtt\\Tests\\": "tests/"
+    }
+  },
+  "minimum-stability": "stable",
+  "prefer-stable": true,
+  "scripts": {
+    "test": "pest",
+    "test:coverage": "pest --coverage",
+    "type-coverage": "pest --type-coverage",
+    "stan": "phpstan analyse --memory-limit=1G",
+    "pint": "pint",
+    "lint": "@pint --test && @stan",
+    "rector": "rector process --clear-cache",
+    "bench": "php benchmarks/publish-throughput.php"
+  },
+  "config": {
+    "sort-packages": true,
+    "allow-plugins": {
+      "pestphp/pest-plugin": true
+    }
+  }
+}

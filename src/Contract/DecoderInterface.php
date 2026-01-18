@@ -1,0 +1,147 @@
+<?php
+
+declare(strict_types=1);
+
+namespace ScienceStories\Mqtt\Contract;
+
+use ScienceStories\Mqtt\Client\InboundMessage;
+use ScienceStories\Mqtt\Exception\ProtocolError;
+use ScienceStories\Mqtt\Protocol\Packet\ConnAck;
+use ScienceStories\Mqtt\Protocol\Packet\Disconnect;
+use ScienceStories\Mqtt\Protocol\Packet\PubAck;
+use ScienceStories\Mqtt\Protocol\Packet\PubComp;
+use ScienceStories\Mqtt\Protocol\Packet\PubRec;
+use ScienceStories\Mqtt\Protocol\Packet\PubRel;
+use ScienceStories\Mqtt\Protocol\Packet\SubAck;
+use ScienceStories\Mqtt\Protocol\Packet\UnsubAck;
+
+/**
+ * Contract for MQTT packet decoders.
+ *
+ * Implementations must decode packets according to their respective MQTT protocol version:
+ * - V311\Decoder: MQTT 3.1.1 (protocol level 4)
+ * - V5\Decoder: MQTT 5.0 (protocol level 5)
+ */
+interface DecoderInterface
+{
+    /**
+     * Decode a CONNACK packet from binary format.
+     *
+     * The CONNACK packet is sent by the broker in response to a CONNECT packet.
+     * It contains session present flag, return/reason code, and properties (MQTT 5).
+     *
+     * @param  string  $packetBody  Binary packet body (variable header + payload, excluding fixed header)
+     * @return ConnAck Decoded CONNACK packet data
+     * @throws ProtocolError If a packet is malformed
+     */
+    public function decodeConnAck(string $packetBody): ConnAck;
+
+    /**
+     * Decode a SUBACK packet from binary format.
+     *
+     * The SUBACK packet is sent by the broker in response to a SUBSCRIBE packet.
+     * It contains the packet identifier and return codes for each subscription.
+     *
+     * @param  string  $packetBody  Binary packet body (variable header + payload, excluding fixed header)
+     * @return SubAck Decoded SUBACK packet with packet ID, return codes, and properties (MQTT 5.0)
+     * @throws ProtocolError If packet is malformed
+     */
+    public function decodeSubAck(string $packetBody): SubAck;
+
+    /**
+     * Decode an inbound PUBLISH packet from binary format.
+     *
+     * The PUBLISH packet is used to deliver messages to subscribed clients.
+     * It contains topic, payload, QoS level, retain flag, and properties (MQTT 5).
+     *
+     * @param  int  $flags  Fixed header flags (bits 0-3 of first byte)
+     * @param  string  $packetBody  Binary packet body (variable header + payload, excluding fixed header)
+     * @return InboundMessage Decoded PUBLISH message
+     * @throws ProtocolError If a packet is malformed
+     */
+    public function decodePublish(int $flags, string $packetBody): InboundMessage;
+
+    /**
+     * Decode an UNSUBACK packet from binary format.
+     *
+     * The UNSUBACK packet is sent by the broker in response to an UNSUBSCRIBE packet.
+     * For MQTT 3.1.1, it contains only the packet identifier (implicit success).
+     * For MQTT 5.0, it also includes reason codes for each unsubscription and optional properties.
+     *
+     * @param  string  $packetBody  Binary packet body (variable header + payload, excluding fixed header)
+     * @return UnsubAck Decoded UNSUBACK packet with packet ID, reason codes (MQTT 5.0), and properties (MQTT 5.0)
+     * @throws ProtocolError If a packet is malformed
+     */
+    public function decodeUnsubAck(string $packetBody): UnsubAck;
+
+    /**
+     * Decode a PUBACK packet from binary format.
+     *
+     * The PUBACK packet is the QoS 1 acknowledgment sent in response to a PUBLISH packet.
+     * For MQTT 3.1.1, it contains only the packet identifier.
+     * For MQTT 5.0, it also includes a reason code and optional properties for error reporting.
+     *
+     * @param  string  $packetBody  Binary packet body (variable header + payload, excluding fixed header)
+     * @return PubAck Decoded PUBACK packet with packet ID, reason code (MQTT 5.0), and properties (MQTT 5.0)
+     * @throws ProtocolError If packet is malformed
+     */
+    public function decodePubAck(string $packetBody): PubAck;
+
+    /**
+     * Decode a PUBREC packet from binary format.
+     *
+     * The PUBREC packet is the first QoS 2 acknowledgment sent in response to a PUBLISH packet.
+     * It confirms receipt of the message and initiates the QoS 2 handshake.
+     * For MQTT 3.1.1, it contains only the packet identifier.
+     * For MQTT 5.0, it also includes a reason code and optional properties for error reporting.
+     *
+     * @param  string  $packetBody  Binary packet body (variable header + payload, excluding fixed header)
+     * @return PubRec Decoded PUBREC packet with packet ID, reason code (MQTT 5.0), and properties (MQTT 5.0)
+     * @throws ProtocolError If packet is malformed
+     */
+    public function decodePubRec(string $packetBody): PubRec;
+
+    /**
+     * Decode a PUBREL packet from binary format.
+     *
+     * The PUBREL packet is the second step in the QoS 2 handshake, sent in response to PUBREC.
+     * It releases the message for delivery to the application.
+     * For MQTT 3.1.1, it contains only the packet identifier.
+     * For MQTT 5.0, it also includes a reason code and optional properties.
+     *
+     * @param  string  $packetBody  Binary packet body (variable header + payload, excluding fixed header)
+     * @return PubRel Decoded PUBREL packet with packet ID, reason code (MQTT 5.0), and properties (MQTT 5.0)
+     * @throws ProtocolError If packet is malformed
+     */
+    public function decodePubRel(string $packetBody): PubRel;
+
+    /**
+     * Decode a PUBCOMP packet from binary format.
+     *
+     * The PUBCOMP packet is the final QoS 2 acknowledgment sent in response to PUBREL.
+     * It confirms completion of the QoS 2 message delivery (exactly once guarantee).
+     * For MQTT 3.1.1, it contains only the packet identifier.
+     * For MQTT 5.0, it also includes a reason code and optional properties.
+     *
+     * @param  string  $packetBody  Binary packet body (variable header + payload, excluding fixed header)
+     * @return PubComp Decoded PUBCOMP packet with packet ID, reason code (MQTT 5.0), and properties (MQTT 5.0)
+     * @throws ProtocolError If packet is malformed
+     */
+    public function decodePubComp(string $packetBody): PubComp;
+
+    /**
+     * Decode a DISCONNECT packet from binary format.
+     *
+     * The DISCONNECT packet is used to gracefully close the connection.
+     * In MQTT 5.0, the broker can also send DISCONNECT to the client with
+     * reason codes explaining why the connection is being closed.
+     *
+     * For MQTT 3.1.1, the DISCONNECT packet has no body (always normal disconnect).
+     * For MQTT 5.0, it includes an optional reason code and properties.
+     *
+     * @param  string  $packetBody  Binary packet body (variable header, excluding fixed header)
+     * @return Disconnect Decoded DISCONNECT packet with reason code and properties (MQTT 5.0)
+     * @throws ProtocolError If packet is malformed
+     */
+    public function decodeDisconnect(string $packetBody): Disconnect;
+}
