@@ -6,6 +6,9 @@ namespace ScienceStories\Mqtt\Util;
 
 use ScienceStories\Mqtt\Exception\ProtocolError;
 
+use function count;
+use function strlen;
+
 /**
  * Validates MQTT topic names and subscription filters per MQTT spec.
  *
@@ -31,7 +34,7 @@ final class TopicValidator
             throw new ProtocolError('PUBLISH topic must not be empty');
         }
 
-        if (\strlen($topic) > self::MAX_TOPIC_LENGTH) {
+        if (strlen($topic) > self::MAX_TOPIC_LENGTH) {
             throw new ProtocolError('Topic exceeds maximum length of 65535 bytes');
         }
 
@@ -55,7 +58,7 @@ final class TopicValidator
             throw new ProtocolError('SUBSCRIBE filter must not be empty');
         }
 
-        if (\strlen($filter) > self::MAX_TOPIC_LENGTH) {
+        if (strlen($filter) > self::MAX_TOPIC_LENGTH) {
             throw new ProtocolError('Topic filter exceeds maximum length of 65535 bytes');
         }
 
@@ -64,7 +67,7 @@ final class TopicValidator
         }
 
         $levels    = explode('/', $filter);
-        $lastIndex = \count($levels) - 1;
+        $lastIndex = count($levels) - 1;
 
         foreach ($levels as $i => $level) {
             // Single-level wildcard (+) must occupy an entire level

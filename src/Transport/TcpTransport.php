@@ -8,6 +8,14 @@ use ScienceStories\Mqtt\Contract\TransportInterface;
 use ScienceStories\Mqtt\Exception\Timeout;
 use ScienceStories\Mqtt\Exception\TransportError;
 
+use function array_key_exists;
+use function is_array;
+use function is_int;
+use function is_resource;
+use function is_string;
+use function sprintf;
+use function strlen;
+
 final class TcpTransport implements TransportInterface
 {
     /** @var resource|null */
@@ -22,7 +30,7 @@ final class TcpTransport implements TransportInterface
     {
         $this->close();
 
-        $remote        = \sprintf('tcp://%s:%d', $host, $port);
+        $remote        = sprintf('tcp://%s:%d', $host, $port);
         $this->context = stream_context_create([]);
 
         $errno  = 0;
@@ -37,9 +45,9 @@ final class TcpTransport implements TransportInterface
         );
 
         if ($stream === false) {
-            $errNo  = \is_int($errno) ? $errno : 0;
-            $errStr = \is_string($errstr) ? $errstr : '';
-            throw new TransportError(\sprintf('Failed to connect to %s:%d: [%d] %s', $host, $port, $errNo, $errStr));
+            $errNo  = is_int($errno) ? $errno : 0;
+            $errStr = is_string($errstr) ? $errstr : '';
+            throw new TransportError(sprintf('Failed to connect to %s:%d: [%d] %s', $host, $port, $errNo, $errStr));
         }
 
         // Blocking mode with a sane per-op timeout
@@ -58,12 +66,12 @@ final class TcpTransport implements TransportInterface
             throw new TransportError('Cannot write: transport is not open');
         }
         $stream = $this->stream;
-        if (! \is_resource($stream)) {
+        if (! is_resource($stream)) {
             throw new TransportError('Invalid stream resource');
         }
 
         $total = 0;
-        $len   = \strlen($bytes);
+        $len   = strlen($bytes);
         while ($total < $len) {
             $written = @fwrite($stream, substr($bytes, $total));
             if ($written === false) {
@@ -97,15 +105,15 @@ final class TcpTransport implements TransportInterface
             throw new TransportError('Cannot read: transport is not open');
         }
         $stream = $this->stream;
-        if (! \is_resource($stream)) {
+        if (! is_resource($stream)) {
             throw new TransportError('Invalid stream resource');
         }
 
         $data     = '';
         $deadline = $timeoutSec !== null ? (microtime(true) + $timeoutSec) : null;
 
-        while (\strlen($data) < $length) {
-            $remaining = $length - \strlen($data);
+        while (strlen($data) < $length) {
+            $remaining = $length - strlen($data);
             if ($remaining <= 0) {
                 break;
             }
@@ -156,7 +164,7 @@ final class TcpTransport implements TransportInterface
 
     public function close(): void
     {
-        if (\is_resource($this->stream)) {
+        if (is_resource($this->stream)) {
             @fclose($this->stream);
         }
         $this->stream     = null;
@@ -166,7 +174,7 @@ final class TcpTransport implements TransportInterface
 
     public function isOpen(): bool
     {
-        return \is_resource($this->stream);
+        return is_resource($this->stream);
     }
 
     /**
@@ -181,18 +189,18 @@ final class TcpTransport implements TransportInterface
             return; // already enabled
         }
         $stream = $this->stream;
-        if (! \is_resource($stream)) {
+        if (! is_resource($stream)) {
             throw new TransportError('Invalid stream resource');
         }
 
         // Apply TLS/SSL context options if provided (e.g., ['ssl' => ['verify_peer' => true, ...]])
         if ($tlsOptions) {
-            if (! \is_resource($this->context)) {
+            if (! is_resource($this->context)) {
                 $this->context = stream_context_create([]);
             }
             // Support both nested wrapper array and flat options under 'ssl'
             foreach ($tlsOptions as $wrapper => $opts) {
-                if ($wrapper !== 'ssl' || ! \is_array($opts)) {
+                if ($wrapper !== 'ssl' || ! is_array($opts)) {
                     // If user passed flat array, map it under 'ssl'
                     $wrapper = 'ssl';
                     $opts    = $tlsOptions;
@@ -208,14 +216,14 @@ final class TcpTransport implements TransportInterface
         if ($this->context) {
             // Try to set a couple of sane defaults if not explicitly provided
             $opts = stream_context_get_options($this->context);
-            $ssl  = \is_array($opts['ssl'] ?? null) ? $opts['ssl'] : [];
-            if (! \array_key_exists('SNI_enabled', $ssl)) {
+            $ssl  = is_array($opts['ssl'] ?? null) ? $opts['ssl'] : [];
+            if (! array_key_exists('SNI_enabled', $ssl)) {
                 @stream_context_set_option($this->context, 'ssl', 'SNI_enabled', true);
             }
-            if (! \array_key_exists('verify_peer', $ssl)) {
+            if (! array_key_exists('verify_peer', $ssl)) {
                 @stream_context_set_option($this->context, 'ssl', 'verify_peer', true);
             }
-            if (! \array_key_exists('verify_peer_name', $ssl)) {
+            if (! array_key_exists('verify_peer_name', $ssl)) {
                 @stream_context_set_option($this->context, 'ssl', 'verify_peer_name', true);
             }
         }

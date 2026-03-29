@@ -6,6 +6,9 @@ namespace ScienceStories\Mqtt\Protocol\Packet;
 
 use ScienceStories\Mqtt\Protocol\MqttVersion;
 
+use function is_array;
+use function is_string;
+
 /**
  * SUBACK packet model for MQTT 3.1.1 and 5.0.
  *
@@ -108,7 +111,7 @@ final class SubAck
      */
     public function getReasonDescription(int $code, MqttVersion|string $version): string
     {
-        if (\is_string($version)) {
+        if (is_string($version)) {
             $version = $version === '5.0' ? MqttVersion::V5_0 : MqttVersion::V3_1_1;
         }
 
@@ -195,7 +198,7 @@ final class SubAck
     {
         $val = $this->getProperty('reason_string');
 
-        return \is_string($val) ? $val : null;
+        return is_string($val) ? $val : null;
     }
 
     /**
@@ -207,11 +210,11 @@ final class SubAck
     {
         $val = $this->getProperty('user_properties');
 
-        if (! \is_array($val)) {
+        if (! is_array($val)) {
             return [];
         }
 
         // Ensure all keys and values are strings for type safety
-        return array_filter($val, fn ($value, $key): bool => \is_string($key) && \is_string($value), ARRAY_FILTER_USE_BOTH);
+        return array_filter($val, fn ($value, $key): bool => is_string($key) && is_string($value), ARRAY_FILTER_USE_BOTH);
     }
 }

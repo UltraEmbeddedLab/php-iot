@@ -6,6 +6,11 @@ namespace ScienceStories\Mqtt\Util;
 
 use ScienceStories\Mqtt\Exception\ProtocolError;
 
+use function chr;
+use function is_int;
+use function ord;
+use function strlen;
+
 /**
  * Utility functions for encoding/decoding MQTT binary formats.
  */
@@ -29,7 +34,7 @@ final class Bytes
             if ($value > 0) {
                 $byte |= 0x80;
             }
-            $out .= \chr($byte);
+            $out .= chr($byte);
         } while ($value > 0);
 
         return $out;
@@ -53,7 +58,7 @@ final class Bytes
                 throw new ProtocolError('Malformed VarInt: data too short');
             }
 
-            $byte = \ord($data[$i]);
+            $byte = ord($data[$i]);
             $consumed++;
 
             $value += ($byte & 0x7F) * $multiplier;
@@ -75,7 +80,7 @@ final class Bytes
      */
     public static function encodeString(string $value): string
     {
-        $len = \strlen($value);
+        $len = strlen($value);
         if ($len > 65535) {
             throw new ProtocolError("String too long: {$len} bytes");
         }
@@ -92,18 +97,18 @@ final class Bytes
      */
     public static function decodeString(string $data, int &$offset = 0): string
     {
-        if ($offset + 2 > \strlen($data)) {
+        if ($offset + 2 > strlen($data)) {
             throw new ProtocolError('Malformed string: missing length');
         }
 
         $lenArr = @unpack('n', substr($data, $offset, 2));
-        if ($lenArr === false || ! isset($lenArr[1]) || ! \is_int($lenArr[1])) {
+        if ($lenArr === false || ! isset($lenArr[1]) || ! is_int($lenArr[1])) {
             throw new ProtocolError('Malformed string: invalid length prefix');
         }
         $len = $lenArr[1];
         $offset += 2;
 
-        if ($offset + $len > \strlen($data)) {
+        if ($offset + $len > strlen($data)) {
             throw new ProtocolError('Malformed string: not enough bytes');
         }
 

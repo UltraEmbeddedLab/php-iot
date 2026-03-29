@@ -6,12 +6,12 @@ use ScienceStories\Mqtt\Client\FlowControl;
 
 test('constructor clamps to minimum 1', function (): void {
     $flow = new FlowControl(0);
-    expect($flow->getMaxInFlight())->toBe(1);
+    expect($flow->maxInFlight)->toBe(1);
 });
 
 test('constructor clamps to maximum 65535', function (): void {
     $flow = new FlowControl(99999);
-    expect($flow->getMaxInFlight())->toBe(65535);
+    expect($flow->maxInFlight)->toBe(65535);
 });
 
 test('canSend initially true', function (): void {
@@ -96,8 +96,8 @@ test('reset clears all state', function (): void {
 
 test('setMaxInFlight updates limit', function (): void {
     $flow = new FlowControl(10);
-    expect($flow->getMaxInFlight())->toBe(10);
+    expect($flow->maxInFlight)->toBe(10);
 
     $flow->setMaxInFlight(5);
-    expect($flow->getMaxInFlight())->toBe(5);
+    expect($flow->maxInFlight)->toBe(5);
 });

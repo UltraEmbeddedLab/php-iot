@@ -18,6 +18,10 @@ use ScienceStories\Mqtt\Protocol\Packet\UnsubAck;
 use ScienceStories\Mqtt\Protocol\QoS;
 use ScienceStories\Mqtt\Util\Bytes;
 
+use function is_int;
+use function ord;
+use function strlen;
+
 /**
  * Decoder for MQTT 5.0 packets.
  *
@@ -37,12 +41,12 @@ final class Decoder implements DecoderInterface
      */
     public function decodeConnAck(string $packetBody): ConnAck
     {
-        if (\strlen($packetBody) < 2) {
+        if (strlen($packetBody) < 2) {
             throw new ProtocolError('CONNACK too short');
         }
 
-        $ackFlags   = \ord($packetBody[0]);
-        $reasonCode = \ord($packetBody[1]);
+        $ackFlags   = ord($packetBody[0]);
+        $reasonCode = ord($packetBody[1]);
 
         // Properties
         $offset   = 2;
@@ -51,7 +55,7 @@ final class Decoder implements DecoderInterface
             $rest     = substr($packetBody, $offset);
             $consumed = 0;
             $len      = Bytes::decodeVarInt($rest, $consumed);
-            if ($consumed + $offset + $len > \strlen($packetBody)) {
+            if ($consumed + $offset + $len > strlen($packetBody)) {
                 throw new ProtocolError('Malformed CONNACK: properties truncated');
             }
             $propsRaw = substr($packetBody, $offset + $consumed, $len);
@@ -87,9 +91,9 @@ final class Decoder implements DecoderInterface
     {
         $out = [];
         $i   = 0;
-        $n   = \strlen($props);
+        $n   = strlen($props);
         while ($i < $n) {
-            $id = \ord($props[$i++]);
+            $id = ord($props[$i++]);
             switch ($id) {
                 case 0x12: // Assigned Client Identifier
                     $off                               = $i;
@@ -125,14 +129,14 @@ final class Decoder implements DecoderInterface
                         $i = $n;
                         break;
                     }
-                    $out['maximum_qos'] = \ord($props[$i++]);
+                    $out['maximum_qos'] = ord($props[$i++]);
                     break;
                 case 0x25: // Retain Available (byte)
                     if ($i >= $n) {
                         $i = $n;
                         break;
                     }
-                    $out['retain_available'] = \ord($props[$i++]);
+                    $out['retain_available'] = ord($props[$i++]);
                     break;
                 case 0x27: // Maximum Packet Size (u32)
                     if ($i + 4 > $n) {
@@ -147,21 +151,21 @@ final class Decoder implements DecoderInterface
                         $i = $n;
                         break;
                     }
-                    $out['wildcard_subscription_available'] = \ord($props[$i++]);
+                    $out['wildcard_subscription_available'] = ord($props[$i++]);
                     break;
                 case 0x29: // Subscription Identifier Available (byte)
                     if ($i >= $n) {
                         $i = $n;
                         break;
                     }
-                    $out['subscription_identifier_available'] = \ord($props[$i++]);
+                    $out['subscription_identifier_available'] = ord($props[$i++]);
                     break;
                 case 0x2A: // Shared Subscription Available (byte)
                     if ($i >= $n) {
                         $i = $n;
                         break;
                     }
-                    $out['shared_subscription_available'] = \ord($props[$i++]);
+                    $out['shared_subscription_available'] = ord($props[$i++]);
                     break;
                 case 0x1A: // Response Information (string)
                     $off                         = $i;
@@ -205,9 +209,9 @@ final class Decoder implements DecoderInterface
     {
         $out = [];
         $i   = 0;
-        $n   = \strlen($props);
+        $n   = strlen($props);
         while ($i < $n) {
-            $id = \ord($props[$i++]);
+            $id = ord($props[$i++]);
             switch ($id) {
                 case 0x1F: // Reason String (string)
                     $off                  = $i;
@@ -245,11 +249,11 @@ final class Decoder implements DecoderInterface
      */
     public function decodeSubAck(string $packetBody): SubAck
     {
-        if (\strlen($packetBody) < 4) { // minimal: id(2)+props_len(1)+empty
+        if (strlen($packetBody) < 4) { // minimal: id(2)+props_len(1)+empty
             throw new ProtocolError('SUBACK too short');
         }
         $arr = unpack('n', substr($packetBody, 0, 2));
-        if ($arr === false || ! isset($arr[1]) || ! \is_int($arr[1])) {
+        if ($arr === false || ! isset($arr[1]) || ! is_int($arr[1])) {
             throw new ProtocolError('SUBACK malformed packet id');
         }
         $pid    = $arr[1];
@@ -259,7 +263,7 @@ final class Decoder implements DecoderInterface
         $consumed = 0;
         $propLen  = Bytes::decodeVarInt($rest, $consumed);
         $offset += $consumed;
-        if ($offset + $propLen > \strlen($packetBody)) {
+        if ($offset + $propLen > strlen($packetBody)) {
             throw new ProtocolError('SUBACK properties truncated');
         }
         $propsRaw = substr($packetBody, $offset, $propLen);
@@ -268,8 +272,8 @@ final class Decoder implements DecoderInterface
 
         // Reason codes
         $codes = [];
-        for ($i = $offset, $n = \strlen($packetBody); $i < $n; $i++) {
-            $codes[] = \ord($packetBody[$i]);
+        for ($i = $offset, $n = strlen($packetBody); $i < $n; $i++) {
+            $codes[] = ord($packetBody[$i]);
         }
 
         return new SubAck($pid, $codes, $propsMap);
@@ -289,11 +293,11 @@ final class Decoder implements DecoderInterface
         $topic    = Bytes::decodeString($packetBody, $offset);
         $packetId = null;
         if ($qosVal > 0) {
-            if ($offset + 2 > \strlen($packetBody)) {
+            if ($offset + 2 > strlen($packetBody)) {
                 throw new ProtocolError('PUBLISH missing packet id');
             }
             $arr = unpack('n', substr($packetBody, $offset, 2));
-            if ($arr === false || ! isset($arr[1]) || ! \is_int($arr[1])) {
+            if ($arr === false || ! isset($arr[1]) || ! is_int($arr[1])) {
                 throw new ProtocolError('PUBLISH invalid packet id');
             }
             $packetId = $arr[1];
@@ -305,7 +309,7 @@ final class Decoder implements DecoderInterface
         $consumed = 0;
         $propLen  = Bytes::decodeVarInt($rest, $consumed);
         $offset += $consumed;
-        if ($offset + $propLen > \strlen($packetBody)) {
+        if ($offset + $propLen > strlen($packetBody)) {
             throw new ProtocolError('PUBLISH properties truncated');
         }
         $propsRaw = substr($packetBody, $offset, $propLen);
@@ -340,11 +344,11 @@ final class Decoder implements DecoderInterface
      */
     public function decodeUnsubAck(string $packetBody): UnsubAck
     {
-        if (\strlen($packetBody) < 4) {
+        if (strlen($packetBody) < 4) {
             throw new ProtocolError('UNSUBACK too short');
         }
         $arr = unpack('n', substr($packetBody, 0, 2));
-        if ($arr === false || ! isset($arr[1]) || ! \is_int($arr[1])) {
+        if ($arr === false || ! isset($arr[1]) || ! is_int($arr[1])) {
             throw new ProtocolError('UNSUBACK malformed packet id');
         }
         $pid    = $arr[1];
@@ -355,7 +359,7 @@ final class Decoder implements DecoderInterface
         $consumed = 0;
         $propLen  = Bytes::decodeVarInt($rest, $consumed);
         $offset += $consumed;
-        if ($offset + $propLen > \strlen($packetBody)) {
+        if ($offset + $propLen > strlen($packetBody)) {
             throw new ProtocolError('UNSUBACK properties truncated');
         }
         $propsRaw = substr($packetBody, $offset, $propLen);
@@ -364,8 +368,8 @@ final class Decoder implements DecoderInterface
 
         // Reason codes
         $codes = [];
-        for ($i = $offset, $n = \strlen($packetBody); $i < $n; $i++) {
-            $codes[] = \ord($packetBody[$i]);
+        for ($i = $offset, $n = strlen($packetBody); $i < $n; $i++) {
+            $codes[] = ord($packetBody[$i]);
         }
 
         return new UnsubAck($pid, $codes, $propsMap);
@@ -381,15 +385,15 @@ final class Decoder implements DecoderInterface
     {
         $out = [];
         $i   = 0;
-        $len = \strlen($props);
+        $len = strlen($props);
         while ($i < $len) {
-            $id = \ord($props[$i++]);
+            $id = ord($props[$i++]);
             switch ($id) {
                 case 0x01: // payload_format_indicator (byte)
                     if ($i >= $len) {
                         break 2;
                     }
-                    $out['payload_format_indicator'] = \ord($props[$i++]);
+                    $out['payload_format_indicator'] = ord($props[$i++]);
                     break;
                 case 0x02: // message_expiry_interval (u32)
                     if ($i + 4 > $len) {
@@ -475,29 +479,29 @@ final class Decoder implements DecoderInterface
      */
     private function decodeQoSAck(string $packetBody, string $packetName): array
     {
-        if (\strlen($packetBody) < 2) {
+        if (strlen($packetBody) < 2) {
             throw new ProtocolError("{$packetName} too short");
         }
         $arr = unpack('n', substr($packetBody, 0, 2));
-        if ($arr === false || ! isset($arr[1]) || ! \is_int($arr[1])) {
+        if ($arr === false || ! isset($arr[1]) || ! is_int($arr[1])) {
             throw new ProtocolError("{$packetName} malformed packet id");
         }
         $pid = $arr[1];
 
-        if (\strlen($packetBody) === 2) {
+        if (strlen($packetBody) === 2) {
             return [$pid, 0, null];
         }
 
-        $reasonCode = \ord($packetBody[2]);
+        $reasonCode = ord($packetBody[2]);
         $offset     = 3;
 
         $propsMap = null;
-        if ($offset < \strlen($packetBody)) {
+        if ($offset < strlen($packetBody)) {
             $rest     = substr($packetBody, $offset);
             $consumed = 0;
             $propLen  = Bytes::decodeVarInt($rest, $consumed);
             $offset += $consumed;
-            if ($offset + $propLen > \strlen($packetBody)) {
+            if ($offset + $propLen > strlen($packetBody)) {
                 throw new ProtocolError("{$packetName} properties truncated");
             }
             $propsRaw = substr($packetBody, $offset, $propLen);
@@ -525,17 +529,17 @@ final class Decoder implements DecoderInterface
         }
 
         // Reason code (1 byte)
-        $reasonCode = \ord($packetBody[0]);
+        $reasonCode = ord($packetBody[0]);
         $offset     = 1;
 
         // Properties
         $propsMap = null;
-        if ($offset < \strlen($packetBody)) {
+        if ($offset < strlen($packetBody)) {
             $rest     = substr($packetBody, $offset);
             $consumed = 0;
             $propLen  = Bytes::decodeVarInt($rest, $consumed);
             $offset += $consumed;
-            if ($offset + $propLen > \strlen($packetBody)) {
+            if ($offset + $propLen > strlen($packetBody)) {
                 throw new ProtocolError('DISCONNECT properties truncated');
             }
             $propsRaw = substr($packetBody, $offset, $propLen);
@@ -559,9 +563,9 @@ final class Decoder implements DecoderInterface
     {
         $out = [];
         $i   = 0;
-        $n   = \strlen($props);
+        $n   = strlen($props);
         while ($i < $n) {
-            $id = \ord($props[$i++]);
+            $id = ord($props[$i++]);
             switch ($id) {
                 case 0x11: // Session Expiry Interval (u32)
                     if ($i + 4 > $n) {

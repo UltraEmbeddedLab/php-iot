@@ -6,6 +6,13 @@ namespace ScienceStories\Mqtt\Util;
 
 use DateTimeImmutable;
 use Psr\Log\AbstractLogger;
+use Stringable;
+
+use function gettype;
+use function is_object;
+use function is_scalar;
+use function is_string;
+use function sprintf;
 
 /**
  * Very small console logger for examples and debugging.
@@ -13,20 +20,20 @@ use Psr\Log\AbstractLogger;
  */
 final class ConsoleLogger extends AbstractLogger
 {
-    public function log($level, string|\Stringable $message, array $context = []): void
+    public function log($level, string|Stringable $message, array $context = []): void
     {
         $ts  = new DateTimeImmutable()->format('H:i:s.u');
-        $msg = \is_string($message) ? $message : (string) $message;
+        $msg = is_string($message) ? $message : (string) $message;
 
         // Normalize level to string
-        if (\is_string($level)) {
+        if (is_string($level)) {
             $levelStr = $level;
-        } elseif (\is_scalar($level)) {
+        } elseif (is_scalar($level)) {
             $levelStr = (string) $level;
-        } elseif (\is_object($level) && method_exists($level, '__toString')) {
+        } elseif (is_object($level) && method_exists($level, '__toString')) {
             $levelStr = (string) $level;
         } else {
-            $levelStr = \gettype($level);
+            $levelStr = gettype($level);
         }
 
         $ctx = '';
@@ -34,6 +41,6 @@ final class ConsoleLogger extends AbstractLogger
             // Best-effort JSON
             $ctx = ' '.json_encode($context, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PARTIAL_OUTPUT_ON_ERROR);
         }
-        fwrite(STDERR, \sprintf('[%s] %s: %s%s', $ts, strtoupper($levelStr), $msg, $ctx).PHP_EOL);
+        fwrite(STDERR, sprintf('[%s] %s: %s%s', $ts, strtoupper($levelStr), $msg, $ctx).PHP_EOL);
     }
 }

@@ -18,6 +18,10 @@ use ScienceStories\Mqtt\Protocol\Packet\UnsubAck;
 use ScienceStories\Mqtt\Protocol\QoS;
 use ScienceStories\Mqtt\Util\Bytes;
 
+use function is_int;
+use function ord;
+use function strlen;
+
 /**
  * Decoder for MQTT 3.1.1 packets.
  *
@@ -33,12 +37,12 @@ final class Decoder implements DecoderInterface
      */
     public function decodeConnAck(string $packetBody): ConnAck
     {
-        if (\strlen($packetBody) < 2) {
+        if (strlen($packetBody) < 2) {
             throw new ProtocolError('CONNACK too short');
         }
 
-        $ackFlags   = \ord($packetBody[0]);
-        $returnCode = \ord($packetBody[1]);
+        $ackFlags   = ord($packetBody[0]);
+        $returnCode = ord($packetBody[1]);
 
         $sessionPresent = (bool) ($ackFlags & 0x01);
 
@@ -56,19 +60,19 @@ final class Decoder implements DecoderInterface
      */
     public function decodeSubAck(string $packetBody): SubAck
     {
-        if (\strlen($packetBody) < 2) {
+        if (strlen($packetBody) < 2) {
             throw new ProtocolError('SUBACK too short');
         }
         $packetId = unpack('n', substr($packetBody, 0, 2));
-        if ($packetId === false || ! isset($packetId[1]) || ! \is_int($packetId[1])) {
+        if ($packetId === false || ! isset($packetId[1]) || ! is_int($packetId[1])) {
             throw new ProtocolError('SUBACK malformed packet id');
         }
         $pid   = $packetId[1];
         $codes = [];
         $rest  = substr($packetBody, 2);
-        $len   = \strlen($rest);
+        $len   = strlen($rest);
         for ($i = 0; $i < $len; $i++) {
-            $codes[] = \ord($rest[$i]);
+            $codes[] = ord($rest[$i]);
         }
 
         return new SubAck($pid, $codes);
@@ -88,11 +92,11 @@ final class Decoder implements DecoderInterface
         $topic    = Bytes::decodeString($packetBody, $offset);
         $packetId = null;
         if ($qosVal > 0) {
-            if ($offset + 2 > \strlen($packetBody)) {
+            if ($offset + 2 > strlen($packetBody)) {
                 throw new ProtocolError('PUBLISH missing packet id');
             }
             $arr = unpack('n', substr($packetBody, $offset, 2));
-            if ($arr === false || ! isset($arr[1]) || ! \is_int($arr[1])) {
+            if ($arr === false || ! isset($arr[1]) || ! is_int($arr[1])) {
                 throw new ProtocolError('PUBLISH invalid packet id');
             }
             $packetId = $arr[1];
@@ -121,11 +125,11 @@ final class Decoder implements DecoderInterface
      */
     public function decodeUnsubAck(string $packetBody): UnsubAck
     {
-        if (\strlen($packetBody) < 2) {
+        if (strlen($packetBody) < 2) {
             throw new ProtocolError('UNSUBACK too short');
         }
         $arr = unpack('n', substr($packetBody, 0, 2));
-        if ($arr === false || ! isset($arr[1]) || ! \is_int($arr[1])) {
+        if ($arr === false || ! isset($arr[1]) || ! is_int($arr[1])) {
             throw new ProtocolError('UNSUBACK malformed packet id');
         }
 
@@ -144,11 +148,11 @@ final class Decoder implements DecoderInterface
      */
     public function decodePubAck(string $packetBody): PubAck
     {
-        if (\strlen($packetBody) < 2) {
+        if (strlen($packetBody) < 2) {
             throw new ProtocolError('PUBACK too short');
         }
         $arr = unpack('n', substr($packetBody, 0, 2));
-        if ($arr === false || ! isset($arr[1]) || ! \is_int($arr[1])) {
+        if ($arr === false || ! isset($arr[1]) || ! is_int($arr[1])) {
             throw new ProtocolError('PUBACK malformed packet id');
         }
 
@@ -167,11 +171,11 @@ final class Decoder implements DecoderInterface
      */
     public function decodePubRec(string $packetBody): PubRec
     {
-        if (\strlen($packetBody) < 2) {
+        if (strlen($packetBody) < 2) {
             throw new ProtocolError('PUBREC too short');
         }
         $arr = unpack('n', substr($packetBody, 0, 2));
-        if ($arr === false || ! isset($arr[1]) || ! \is_int($arr[1])) {
+        if ($arr === false || ! isset($arr[1]) || ! is_int($arr[1])) {
             throw new ProtocolError('PUBREC malformed packet id');
         }
 
@@ -190,11 +194,11 @@ final class Decoder implements DecoderInterface
      */
     public function decodePubRel(string $packetBody): PubRel
     {
-        if (\strlen($packetBody) < 2) {
+        if (strlen($packetBody) < 2) {
             throw new ProtocolError('PUBREL too short');
         }
         $arr = unpack('n', substr($packetBody, 0, 2));
-        if ($arr === false || ! isset($arr[1]) || ! \is_int($arr[1])) {
+        if ($arr === false || ! isset($arr[1]) || ! is_int($arr[1])) {
             throw new ProtocolError('PUBREL malformed packet id');
         }
 
@@ -213,11 +217,11 @@ final class Decoder implements DecoderInterface
      */
     public function decodePubComp(string $packetBody): PubComp
     {
-        if (\strlen($packetBody) < 2) {
+        if (strlen($packetBody) < 2) {
             throw new ProtocolError('PUBCOMP too short');
         }
         $arr = unpack('n', substr($packetBody, 0, 2));
-        if ($arr === false || ! isset($arr[1]) || ! \is_int($arr[1])) {
+        if ($arr === false || ! isset($arr[1]) || ! is_int($arr[1])) {
             throw new ProtocolError('PUBCOMP malformed packet id');
         }
 

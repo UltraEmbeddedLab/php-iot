@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace ScienceStories\Mqtt\Client;
 
+use InvalidArgumentException;
+
+use function strlen;
+
 /**
  * Helper for MQTT 5.0 Shared Subscriptions.
  *
@@ -40,20 +44,20 @@ final class SharedSubscription
      * @param string $topicFilter The underlying topic filter
      * @return string The shared subscription filter: $share/{shareName}/{filter}
      *
-     * @throws \InvalidArgumentException If shareName is empty or contains '/'
+     * @throws InvalidArgumentException If shareName is empty or contains '/'
      */
     public static function filter(string $shareName, string $topicFilter): string
     {
         if ($shareName === '') {
-            throw new \InvalidArgumentException('Share name must not be empty');
+            throw new InvalidArgumentException('Share name must not be empty');
         }
 
         if (str_contains($shareName, '/')) {
-            throw new \InvalidArgumentException('Share name must not contain "/"');
+            throw new InvalidArgumentException('Share name must not contain "/"');
         }
 
         if ($topicFilter === '') {
-            throw new \InvalidArgumentException('Topic filter must not be empty');
+            throw new InvalidArgumentException('Topic filter must not be empty');
         }
 
         return self::PREFIX . $shareName . '/' . $topicFilter;
@@ -78,7 +82,7 @@ final class SharedSubscription
             return null;
         }
 
-        $rest     = substr($filter, \strlen(self::PREFIX));
+        $rest     = substr($filter, strlen(self::PREFIX));
         $slashPos = strpos($rest, '/');
 
         if ($slashPos === false || $slashPos === 0) {

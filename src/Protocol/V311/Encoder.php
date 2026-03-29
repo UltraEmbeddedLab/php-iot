@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace ScienceStories\Mqtt\Protocol\V311;
 
+use LogicException;
 use ScienceStories\Mqtt\Client\SubscribeOptions;
 use ScienceStories\Mqtt\Client\WillOptions;
 use ScienceStories\Mqtt\Contract\EncoderInterface;
@@ -11,6 +12,9 @@ use ScienceStories\Mqtt\Protocol\Packet\Connect;
 use ScienceStories\Mqtt\Protocol\Packet\PacketType;
 use ScienceStories\Mqtt\Protocol\Packet\Publish;
 use ScienceStories\Mqtt\Util\Bytes;
+
+use function chr;
+use function strlen;
 
 /**
  * Encoder for MQTT 3.1.1 packets.
@@ -29,7 +33,7 @@ final class Encoder implements EncoderInterface
     {
         // Variable header
         $vh = Bytes::encodeString('MQTT'); // Protocol Name
-        $vh .= \chr(4);                    // Protocol Level = 4 (MQTT 3.1.1)
+        $vh .= chr(4);                    // Protocol Level = 4 (MQTT 3.1.1)
 
         // Connect Flags
         $flags = 0;
@@ -58,7 +62,7 @@ final class Encoder implements EncoderInterface
             }
         }
 
-        $vh .= \chr($flags);
+        $vh .= chr($flags);
         // Keep Alive (2 bytes)
         $vh .= pack('n', $pkt->keepAlive);
 
@@ -78,8 +82,8 @@ final class Encoder implements EncoderInterface
         }
 
         // Fixed header
-        $remaining = \strlen($vh) + \strlen($payload);
-        $fixed     = \chr(PacketType::CONNECT->value << 4).Bytes::encodeVarInt($remaining);
+        $remaining = strlen($vh) + strlen($payload);
+        $fixed     = chr(PacketType::CONNECT->value << 4).Bytes::encodeVarInt($remaining);
 
         return $fixed.$vh.$payload;
     }
@@ -94,7 +98,7 @@ final class Encoder implements EncoderInterface
      *
      * MQTT 3.1.1 does not support the properties field (that's MQTT 5.0 only).
      *
-     * @throws \LogicException If QoS > 0 and packetId is not provided
+     * @throws LogicException If QoS > 0 and packetId is not provided
      */
     public function encodePublish(Publish $pkt): string
     {
@@ -110,7 +114,7 @@ final class Encoder implements EncoderInterface
         // For QoS 1/2, include Packet Identifier in variable header
         if ($pkt->qos->value > 0) {
             if ($pkt->packetId === null) {
-                throw new \LogicException('QoS>0 requires packetId in Publish packet');
+                throw new LogicException('QoS>0 requires packetId in Publish packet');
             }
             $variableHeader .= pack('n', $pkt->packetId);
         }
@@ -119,9 +123,9 @@ final class Encoder implements EncoderInterface
         $payload = $pkt->payload;
 
         // Calculate the remaining length
-        $remainingLength = \strlen($variableHeader) + \strlen($payload);
+        $remainingLength = strlen($variableHeader) + strlen($payload);
 
-        return \chr($fixedHeader)
+        return chr($fixedHeader)
             .Bytes::encodeVarInt($remainingLength)
             .$variableHeader
             .$payload;
@@ -170,14 +174,14 @@ final class Encoder implements EncoderInterface
             }
 
             // Encode: UTF-8 string (2-byte length + bytes) + 1-byte QoS
-            $payload .= Bytes::encodeString($filter).\chr($qos);
+            $payload .= Bytes::encodeString($filter).chr($qos);
         }
 
         // Calculate remaining length
-        $remaining = \strlen($vh) + \strlen($payload);
+        $remaining = strlen($vh) + strlen($payload);
 
         // Fixed header: type SUBSCRIBE (8) with reserved flags 0b0010 (0x02)
-        $fixed = \chr((PacketType::SUBSCRIBE->value << 4) | 0x02).Bytes::encodeVarInt($remaining);
+        $fixed = chr((PacketType::SUBSCRIBE->value << 4) | 0x02).Bytes::encodeVarInt($remaining);
 
         return $fixed.$vh.$payload;
     }
@@ -214,10 +218,10 @@ final class Encoder implements EncoderInterface
         }
 
         // Calculate remaining length
-        $remaining = \strlen($vh) + \strlen($payload);
+        $remaining = strlen($vh) + strlen($payload);
 
         // Fixed header: type UNSUBSCRIBE (10) with reserved flags 0b0010 (0x02)
-        $fixed = \chr((PacketType::UNSUBSCRIBE->value << 4) | 0x02).Bytes::encodeVarInt($remaining);
+        $fixed = chr((PacketType::UNSUBSCRIBE->value << 4) | 0x02).Bytes::encodeVarInt($remaining);
 
         return $fixed.$vh.$payload;
     }

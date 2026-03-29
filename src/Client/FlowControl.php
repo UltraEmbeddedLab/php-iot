@@ -31,9 +31,6 @@ namespace ScienceStories\Mqtt\Client;
  */
 final class FlowControl
 {
-    /** @var int Maximum concurrent in-flight messages */
-    private int $maxInFlight;
-
     /** @var int Current count of in-flight messages */
     private int $currentInFlight = 0;
 
@@ -44,9 +41,11 @@ final class FlowControl
      * @param int $maxInFlight Maximum concurrent in-flight QoS 1/2 messages.
      *                         Default 65535 per MQTT 5.0 spec.
      */
-    public function __construct(int $maxInFlight = 65535)
-    {
-        $this->maxInFlight = max(1, min($maxInFlight, 65535));
+    public function __construct(
+        public private(set) int $maxInFlight = 65535 {
+            set => max(1, min($value, 65535));
+        },
+    ) {
     }
 
     /**
@@ -92,14 +91,6 @@ final class FlowControl
     }
 
     /**
-     * Get maximum allowed in-flight messages.
-     */
-    public function getMaxInFlight(): int
-    {
-        return $this->maxInFlight;
-    }
-
-    /**
      * Get the pending packet IDs.
      *
      * @return list<int>
@@ -115,17 +106,6 @@ final class FlowControl
     public function isPending(int $packetId): bool
     {
         return isset($this->pending[$packetId]);
-    }
-
-    /**
-     * Get the timestamp when a packet was sent.
-     *
-     * @param int $packetId The packet identifier
-     * @return float|null Unix timestamp with microseconds, or null if not tracked
-     */
-    public function getSendTime(int $packetId): ?float
-    {
-        return $this->pending[$packetId] ?? null;
     }
 
     /**
@@ -164,37 +144,6 @@ final class FlowControl
      */
     public function setMaxInFlight(int $max): void
     {
-        $this->maxInFlight = max(1, min($max, 65535));
-    }
-
-    /**
-     * Wait until a slot is available.
-     *
-     * Note: In single-threaded PHP, this method is useful when combined with
-     * external state updates (e.g., via loopOnce() in the Client). The caller
-     * must ensure trackAck() is called to release slots.
-     *
-     * @param float $pollIntervalSec Polling interval in seconds
-     * @param float|null $timeoutSec Maximum wait time, null for indefinite
-     * @return bool True if slot became available, false on timeout
-     */
-    public function waitForSlot(float $pollIntervalSec = 0.01, ?float $timeoutSec = null): bool
-    {
-        if ($this->canSend()) {
-            return true;
-        }
-
-        $deadline = $timeoutSec !== null ? microtime(true) + $timeoutSec : null;
-
-        // @phpstan-ignore-next-line canSend() state changes via trackAck()
-        while (! $this->canSend()) {
-            if ($deadline !== null && microtime(true) >= $deadline) {
-                return false;
-            }
-            usleep((int) ($pollIntervalSec * 1_000_000));
-        }
-
-        // @phpstan-ignore-next-line while loop exits when canSend() returns true
-        return true;
+        $this->maxInFlight = $max;
     }
 }

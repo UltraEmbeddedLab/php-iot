@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace ScienceStories\Mqtt\Session;
 
+use function count;
+use function is_array;
+use function is_int;
+
 /**
  * Data transfer object representing MQTT session state for persistence.
  *
@@ -79,7 +83,7 @@ final class SessionState
      */
     public function hasSubscriptions(): bool
     {
-        return \count($this->subscriptions) > 0;
+        return count($this->subscriptions) > 0;
     }
 
     /**
@@ -87,7 +91,7 @@ final class SessionState
      */
     public function hasPendingQos2(): bool
     {
-        return \count($this->pendingQos2) > 0;
+        return count($this->pendingQos2) > 0;
     }
 
     /**
@@ -95,7 +99,7 @@ final class SessionState
      */
     public function getSubscriptionCount(): int
     {
-        return \count($this->subscriptions);
+        return count($this->subscriptions);
     }
 
     /**
@@ -120,12 +124,12 @@ final class SessionState
     public static function fromArray(array $data): self
     {
         /** @var array<string, array{qos: int, options: mixed}> $subscriptions */
-        $subscriptions = \is_array($data['subscriptions'] ?? null) ? $data['subscriptions'] : [];
+        $subscriptions = is_array($data['subscriptions'] ?? null) ? $data['subscriptions'] : [];
 
         /** @var list<int> $pendingQos2 */
-        $pendingQos2 = \is_array($data['pending_qos2'] ?? null) ? $data['pending_qos2'] : [];
+        $pendingQos2 = is_array($data['pending_qos2'] ?? null) ? $data['pending_qos2'] : [];
 
-        $savedAt = \is_int($data['saved_at'] ?? null) ? $data['saved_at'] : 0;
+        $savedAt = is_int($data['saved_at'] ?? null) ? $data['saved_at'] : 0;
 
         return new self(
             subscriptions: $subscriptions,

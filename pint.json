@@ -12,9 +12,11 @@
     "single_quote": true,
     "array_syntax": { "syntax": "short" },
     "binary_operator_spaces": { "default": "align_single_space_minimal" },
-    "native_function_invocation": {
-      "include": ["@compiler_optimized"],
-      "scope": "namespaced"
+    "native_function_invocation": false,
+    "global_namespace_import": {
+      "import_classes": true,
+      "import_functions": true,
+      "import_constants": true
     }
   }
 }

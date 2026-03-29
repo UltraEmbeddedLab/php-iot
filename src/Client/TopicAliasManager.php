@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace ScienceStories\Mqtt\Client;
 
+use function count;
+
 /**
  * Manages MQTT 5.0 Topic Aliases for efficient bandwidth usage.
  *
@@ -167,7 +169,7 @@ final class TopicAliasManager
      */
     public function getAliasCount(): int
     {
-        return \count($this->topicToAlias);
+        return count($this->topicToAlias);
     }
 
     /**

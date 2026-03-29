@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace ScienceStories\Mqtt\Session;
 
+use JsonException;
 use RuntimeException;
 use ScienceStories\Mqtt\Contract\SessionStoreInterface;
 
 use function file_exists;
 use function file_get_contents;
 use function file_put_contents;
+use function is_array;
 use function is_dir;
 use function is_writable;
 use function json_decode;
@@ -100,11 +102,11 @@ final readonly class FileSessionStore implements SessionStoreInterface
 
         try {
             $data = json_decode($contents, true, 512, JSON_THROW_ON_ERROR);
-        } catch (\JsonException) {
+        } catch (JsonException) {
             return null;
         }
 
-        if (! \is_array($data)) {
+        if (! is_array($data)) {
             return null;
         }
 
@@ -232,7 +234,7 @@ final readonly class FileSessionStore implements SessionStoreInterface
 
             try {
                 $data = json_decode($contents, true, 512, JSON_THROW_ON_ERROR);
-                if (! \is_array($data)) {
+                if (! is_array($data)) {
                     continue;
                 }
 
@@ -242,7 +244,7 @@ final readonly class FileSessionStore implements SessionStoreInterface
                     unlink($file);
                     $removed++;
                 }
-            } catch (\JsonException) {
+            } catch (JsonException) {
                 // Skip malformed files
             }
         }

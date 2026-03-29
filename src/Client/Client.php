@@ -42,17 +42,25 @@ use SplQueue;
 use Throwable;
 
 use function array_any;
+use function array_key_exists;
 use function array_keys;
 use function array_shift;
 use function bin2hex;
+use function chr;
 use function chunk_split;
+use function count;
 use function explode;
 use function floor;
+use function is_array;
+use function is_int;
+use function is_string;
 use function max;
 use function microtime;
 use function mt_getrandmax;
 use function mt_rand;
+use function ord;
 use function pack;
+use function strlen;
 use function strtoupper;
 use function substr;
 use function time;
@@ -124,7 +132,7 @@ final class Client implements ClientInterface
     private function sendPingReq(): void
     {
         // Build PINGREQ without awaiting response; loopOnce() or ping() will handle PINGRESP
-        $pkt = \chr(PacketType::PINGREQ->value << 4) . \chr(0);
+        $pkt = chr(PacketType::PINGREQ->value << 4) . chr(0);
         $this->logger->debug('>> PINGREQ (auto)');
         $this->transport->write($pkt);
         $this->pingOutstanding = true;
@@ -171,8 +179,8 @@ final class Client implements ClientInterface
         if ($this->options->useTls) {
             // Ensure peer_name defaults to host for SNI if not provided
             $tls = $this->options->tlsOptions ?? [];
-            $ssl = \is_array($tls['ssl'] ?? null) ? $tls['ssl'] : $tls;
-            if (! \array_key_exists('peer_name', $ssl)) {
+            $ssl = is_array($tls['ssl'] ?? null) ? $tls['ssl'] : $tls;
+            if (! array_key_exists('peer_name', $ssl)) {
                 $tls = ['ssl' => $ssl + ['peer_name' => $this->options->host]];
             }
             $this->logger->info('Enabling TLS');
@@ -206,7 +214,7 @@ final class Client implements ClientInterface
             $connectProps,
         );
         $data = $this->encoder->encodeConnect($connect);
-        $this->logger->debug('>> CONNECT', ['bytes' => \strlen($data), 'preview' => $this->hexPreview($data)]);
+        $this->logger->debug('>> CONNECT', ['bytes' => strlen($data), 'preview' => $this->hexPreview($data)]);
         $this->transport->write($data);
         $this->touchActivity();
 
@@ -214,7 +222,7 @@ final class Client implements ClientInterface
         $this->logger->debug('<< waiting for CONNACK');
         $typeByte = $this->transport->readExact(1, 5.0);
         $this->touchActivity();
-        $packetType = \ord($typeByte[0]) >> 4;
+        $packetType = ord($typeByte[0]) >> 4;
         if ($packetType !== PacketType::CONNACK->value) {
             throw new ProtocolError("Expected CONNACK, got type $packetType");
         }
@@ -224,7 +232,7 @@ final class Client implements ClientInterface
         for ($i = 0; $i < 4; $i++) {
             $b = $this->transport->readExact(1, 5.0);
             $varBytes .= $b;
-            $byte = \ord($b);
+            $byte = ord($b);
             if (($byte & 0x80) === 0) {
                 break;
             }
@@ -246,22 +254,22 @@ final class Client implements ClientInterface
         $this->logger->info('CONNACK', ['sessionPresent' => $connack->sessionPresent, 'reasonCode' => $connack->returnCode, 'version' => $versionStr]);
 
         $assignedId = null;
-        if ($this->options->version === MqttVersion::V5_0 && \is_array($connack->properties)) {
+        if ($this->options->version === MqttVersion::V5_0 && is_array($connack->properties)) {
             $assignedId = $connack->properties['assigned_client_identifier'] ?? null;
-            if (! \is_string($assignedId)) {
+            if (! is_string($assignedId)) {
                 $assignedId = null;
             }
 
             // Initialize Topic Alias Manager with broker's limit
             $brokerTopicAliasMax = $connack->properties['topic_alias_maximum'] ?? 0;
-            if (\is_int($brokerTopicAliasMax) && $brokerTopicAliasMax > 0) {
+            if (is_int($brokerTopicAliasMax) && $brokerTopicAliasMax > 0) {
                 $this->topicAliasManager = new TopicAliasManager($brokerTopicAliasMax);
                 $this->logger->debug('Topic Alias Manager initialized', ['max' => $brokerTopicAliasMax]);
             }
 
             // Initialize Flow Control with broker's receive_maximum
             $brokerReceiveMax = $connack->properties['receive_maximum'] ?? 65535;
-            if (\is_int($brokerReceiveMax) && $brokerReceiveMax > 0) {
+            if (is_int($brokerReceiveMax) && $brokerReceiveMax > 0) {
                 $this->flowControl = new FlowControl($brokerReceiveMax);
                 $this->logger->debug('Flow Control initialized', ['max' => $brokerReceiveMax]);
             }
@@ -297,7 +305,7 @@ final class Client implements ClientInterface
         }
 
         // DISCONNECT fixed header: type 14, flags 0, length 0
-        $packet = \chr(PacketType::DISCONNECT->value << 4) . \chr(0);
+        $packet = chr(PacketType::DISCONNECT->value << 4) . chr(0);
         $this->logger->debug('>> DISCONNECT');
         $this->transport->write($packet);
 
@@ -333,7 +341,7 @@ final class Client implements ClientInterface
             if ($this->flowControl instanceof FlowControl && ! $this->flowControl->canSend()) {
                 $this->logger->debug('Flow control: waiting for slot', [
                     'inFlight' => $this->flowControl->getInFlightCount(),
-                    'max'      => $this->flowControl->getMaxInFlight(),
+                    'max'      => $this->flowControl->maxInFlight,
                 ]);
                 // Poll loopOnce to process incoming ACKs while waiting
                 $deadline = microtime(true) + 5.0;
@@ -381,8 +389,8 @@ final class Client implements ClientInterface
             'topic'         => $topic,
             'qos'           => $options->qos->value,
             'retain'        => $options->retain,
-            'bytes'         => \strlen($data),
-            'payload_bytes' => \strlen($payload),
+            'bytes'         => strlen($data),
+            'payload_bytes' => strlen($payload),
             'properties'    => $publishProps ?? [],
             'preview'       => $this->hexPreview($data),
             'packetId'      => $packetId,
@@ -399,7 +407,7 @@ final class Client implements ClientInterface
 
         if ($this->metrics instanceof MetricsInterface) {
             $this->metrics->increment('publish_sent', 1.0, ['qos' => $qos]);
-            $this->metrics->size('publish_payload_bytes', \strlen($payload), ['qos' => $qos]);
+            $this->metrics->size('publish_payload_bytes', strlen($payload), ['qos' => $qos]);
         }
         $this->touchActivity();
 
@@ -460,7 +468,7 @@ final class Client implements ClientInterface
         if (! $this->transport->isOpen()) {
             throw new LogicException('Cannot PING: transport not open');
         }
-        $pkt = \chr(PacketType::PINGREQ->value << 4) . \chr(0);
+        $pkt = chr(PacketType::PINGREQ->value << 4) . chr(0);
         $this->logger->debug('>> PINGREQ');
         $this->transport->write($pkt);
         $this->pingOutstanding = true;
@@ -468,8 +476,8 @@ final class Client implements ClientInterface
 
         $hdr = $this->transport->readExact(2, $timeoutSec ?? 5.0);
         $this->touchActivity();
-        $type = (\ord($hdr[0]) >> 4);
-        $rl   = \ord($hdr[1]);
+        $type = (ord($hdr[0]) >> 4);
+        $rl   = ord($hdr[1]);
         if ($type === PacketType::PINGRESP->value && $rl === 0) {
             $this->pingOutstanding = false;
             $this->logger->info('PINGRESP OK');
@@ -494,7 +502,7 @@ final class Client implements ClientInterface
     {
         $pid  = RandomId::packetId();
         $data = $this->encoder->encodeSubscribe($filters, $pid, $options);
-        $this->logger->debug('>> SUBSCRIBE', ['packetId' => $pid, 'filters' => $filters, 'bytes' => \strlen($data), 'preview' => $this->hexPreview($data)]);
+        $this->logger->debug('>> SUBSCRIBE', ['packetId' => $pid, 'filters' => $filters, 'bytes' => strlen($data), 'preview' => $this->hexPreview($data)]);
         $this->transport->write($data);
         $this->touchActivity();
 
@@ -541,7 +549,7 @@ final class Client implements ClientInterface
             return;
         }
         $data = $this->encoder->encodeUnsubscribe($filters, $pid);
-        $this->logger->debug('>> UNSUBSCRIBE', ['packetId' => $pid, 'filters' => $filters, 'bytes' => \strlen($data), 'preview' => $this->hexPreview($data)]);
+        $this->logger->debug('>> UNSUBSCRIBE', ['packetId' => $pid, 'filters' => $filters, 'bytes' => strlen($data), 'preview' => $this->hexPreview($data)]);
         $this->transport->write($data);
         $this->touchActivity();
 
@@ -593,15 +601,15 @@ final class Client implements ClientInterface
 
             return false;
         }
-        $type  = (\ord($b0[0]) >> 4);
-        $flags = (\ord($b0[0]) & 0x0F);
+        $type  = (ord($b0[0]) >> 4);
+        $flags = (ord($b0[0]) & 0x0F);
 
         // Remaining Length varint
         $varBytes = '';
         for ($i = 0; $i < 4; $i++) {
             $b = $this->transport->readExact(1, $timeoutSec);
             $varBytes .= $b;
-            $byte = \ord($b);
+            $byte = ord($b);
             if (($byte & 0x80) === 0) {
                 break;
             }
@@ -614,7 +622,7 @@ final class Client implements ClientInterface
         $raw = $b0.$varBytes.$body;
         if ($this->metrics instanceof MetricsInterface) {
             $this->metrics->increment('packets_received', 1.0, ['type' => $type]);
-            $this->metrics->size('packet_bytes', \strlen($raw), ['dir' => 'in', 'type' => $type]);
+            $this->metrics->size('packet_bytes', strlen($raw), ['dir' => 'in', 'type' => $type]);
         }
         $this->dispatch(new EvPacketReceived($raw, $type, $flags, $rl));
 
@@ -623,7 +631,7 @@ final class Client implements ClientInterface
                 $msg = $this->decoder->decodePublish($flags, $body);
                 // QoS1: immediately acknowledge with PUBACK (v3/v5 minimal form)
                 if ($msg->qos->value === 1 && $msg->packetId !== null) {
-                    $puback = \chr(PacketType::PUBACK->value << 4) . \chr(2) . pack('n', $msg->packetId);
+                    $puback = chr(PacketType::PUBACK->value << 4) . chr(2) . pack('n', $msg->packetId);
                     $this->logger->debug('>> PUBACK', ['packetId' => $msg->packetId]);
                     $this->transport->write($puback);
                     $this->touchActivity();
@@ -635,7 +643,7 @@ final class Client implements ClientInterface
                         return true;
                     }
                     $this->qos1Seen[$pid] = microtime(true);
-                    if (\count($this->qos1Seen) > $this->qos1SeenMax) {
+                    if (count($this->qos1Seen) > $this->qos1SeenMax) {
                         // Drop the oldest (insertion order preserved in PHP arrays)
                         array_shift($this->qos1Seen);
                     }
@@ -649,7 +657,7 @@ final class Client implements ClientInterface
                 if ($msg->qos->value === 2 && $msg->packetId !== null) {
                     // If duplicate PUBLISH (a DUP flag may be set), resend PUBREC but do not duplicate store
                     $pid    = $msg->packetId;
-                    $pubrec = \chr(PacketType::PUBREC->value << 4) . \chr(2) . pack('n', $pid);
+                    $pubrec = chr(PacketType::PUBREC->value << 4) . chr(2) . pack('n', $pid);
                     $this->logger->debug('>> PUBREC', ['packetId' => $pid]);
                     $this->transport->write($pubrec);
                     $this->touchActivity();
@@ -709,7 +717,7 @@ final class Client implements ClientInterface
                     'success'    => $pubrel->isSuccess(),
                 ]);
                 // Send PUBCOMP response
-                $pubcomp = \chr(PacketType::PUBCOMP->value << 4) . \chr(2) . pack('n', $pid);
+                $pubcomp = chr(PacketType::PUBCOMP->value << 4) . chr(2) . pack('n', $pid);
                 $this->logger->debug('>> PUBCOMP', ['packetId' => $pid]);
                 $this->transport->write($pubcomp);
                 $this->touchActivity();
@@ -733,7 +741,7 @@ final class Client implements ClientInterface
                     'success'    => $pubrec->isSuccess(),
                 ]);
                 // Send PUBREL response (flags 0x02)
-                $pubrel = \chr((PacketType::PUBREL->value << 4) | 0x02) . \chr(2) . pack('n', $pid);
+                $pubrel = chr((PacketType::PUBREL->value << 4) | 0x02) . chr(2) . pack('n', $pid);
                 $this->logger->debug('>> PUBREL', ['packetId' => $pid]);
                 $this->transport->write($pubrel);
                 $this->touchActivity();
@@ -979,7 +987,7 @@ final class Client implements ClientInterface
         $s   = substr($bytes, 0, 64);
         $hex = strtoupper(bin2hex($s));
 
-        return trim(chunk_split($hex, 2, ' ')) . (\strlen($bytes) > 64 ? ' …' : '');
+        return trim(chunk_split($hex, 2, ' ')) . (strlen($bytes) > 64 ? ' …' : '');
     }
 
     private function deliverIfMatches(InboundMessage $msg): void
@@ -989,7 +997,7 @@ final class Client implements ClientInterface
             $this->inbound->enqueue($msg);
             if ($this->metrics instanceof MetricsInterface) {
                 $this->metrics->increment('messages_delivered', 1.0, ['qos' => $msg->qos->value, 'retain' => $msg->retain ? 1 : 0]);
-                $this->metrics->size('message_payload_bytes', \strlen($msg->payload), ['dir' => 'in', 'qos' => $msg->qos->value]);
+                $this->metrics->size('message_payload_bytes', strlen($msg->payload), ['dir' => 'in', 'qos' => $msg->qos->value]);
             }
             // PSR-14: emit MessageReceived when the message is accepted for delivery
             $this->dispatch(new EvMessageReceived($msg));
@@ -1026,8 +1034,8 @@ final class Client implements ClientInterface
         $fLevels = explode('/', $filter);
         $ti      = 0;
         $fi      = 0;
-        $tn      = \count($tLevels);
-        $fn      = \count($fLevels);
+        $tn      = count($tLevels);
+        $fn      = count($fLevels);
         while ($fi < $fn) {
             $f = $fLevels[$fi];
             if ($f === '#') {
@@ -1070,8 +1078,8 @@ final class Client implements ClientInterface
             $store->save($clientId, $state);
             $this->logger->debug('Session saved', [
                 'clientId'      => $clientId,
-                'subscriptions' => \count($this->subscriptions),
-                'pendingQos2'   => \count($pendingQos2),
+                'subscriptions' => count($this->subscriptions),
+                'pendingQos2'   => count($pendingQos2),
             ]);
         } catch (Throwable $e) {
             $this->logger->warning('Failed to save session', ['error' => $e->getMessage()]);
@@ -1103,7 +1111,7 @@ final class Client implements ClientInterface
 
             $this->logger->debug('Session restored', [
                 'clientId'      => $clientId,
-                'subscriptions' => \count($state->subscriptions),
+                'subscriptions' => count($state->subscriptions),
                 'age'           => $state->getAge(),
             ]);
         } catch (Throwable $e) {

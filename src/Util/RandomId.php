@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace ScienceStories\Mqtt\Util;
 
+use InvalidArgumentException;
 use Random\RandomException;
 
 /**
@@ -25,7 +26,7 @@ final class RandomId
     public static function clientId(int $length = 16): string
     {
         if ($length < 1) {
-            throw new \InvalidArgumentException('Client ID length must be >= 1');
+            throw new InvalidArgumentException('Client ID length must be >= 1');
         }
         $bytes = random_bytes($length);
 

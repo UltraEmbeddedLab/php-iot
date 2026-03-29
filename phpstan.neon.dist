@@ -6,7 +6,10 @@ parameters:
   bootstrapFiles:
     - vendor/autoload.php
   treatPhpDocTypesAsCertain: true
-  reportUnmatchedIgnoredErrors: true
+  reportUnmatchedIgnoredErrors: false
+  ignoreErrors:
+    - message: '#Access to private property .+\:\:\$maxInFlight#'
+      path: src/Client/Client.php
   checkMissingTypehints: true
   inferPrivatePropertyTypeFromConstructor: true
   parallel:

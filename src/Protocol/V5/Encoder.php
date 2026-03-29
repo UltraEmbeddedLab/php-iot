@@ -4,13 +4,28 @@ declare(strict_types=1);
 
 namespace ScienceStories\Mqtt\Protocol\V5;
 
+use InvalidArgumentException;
+use LogicException;
 use ScienceStories\Mqtt\Client\SubscribeOptions;
-use ScienceStories\Mqtt\Client\WillOptions;
-use ScienceStories\Mqtt\Contract\EncoderInterface;
-use ScienceStories\Mqtt\Protocol\Packet\Connect; // reuse DTO
-use ScienceStories\Mqtt\Protocol\Packet\PacketType; // reuse DTO
-use ScienceStories\Mqtt\Protocol\Packet\Publish; // codes are identical in v5
+use ScienceStories\Mqtt\Client\WillOptions; // reuse DTO
+use ScienceStories\Mqtt\Contract\EncoderInterface; // reuse DTO
+use ScienceStories\Mqtt\Protocol\Packet\Connect; // codes are identical in v5
+use ScienceStories\Mqtt\Protocol\Packet\PacketType;
+use ScienceStories\Mqtt\Protocol\Packet\Publish;
 use ScienceStories\Mqtt\Util\Bytes;
+
+use function array_key_exists;
+use function chr;
+use function count;
+use function is_array;
+use function is_bool;
+use function is_float;
+use function is_int;
+use function is_object;
+use function is_resource;
+use function is_string;
+use function sprintf;
+use function strlen;
 
 /**
  * Encoder for MQTT 5.0 packets.
@@ -30,7 +45,7 @@ final class Encoder implements EncoderInterface
     {
         // Variable header
         $vh = Bytes::encodeString('MQTT'); // Protocol Name
-        $vh .= \chr(5);                    // Protocol Level = 5 (MQTT 5.0)
+        $vh .= chr(5);                    // Protocol Level = 5 (MQTT 5.0)
 
         // Connect Flags (same bit layout as v3.1.1, Clean Start replaces Clean Session)
         $flags = 0;
@@ -56,54 +71,54 @@ final class Encoder implements EncoderInterface
                 $flags |= 0x20;
             }
         }
-        $vh .= \chr($flags);
+        $vh .= chr($flags);
 
         // Keep Alive (2 bytes)
         $vh .= pack('n', $pkt->keepAlive);
 
         // Properties (varint length). Include known properties when provided on packet.
         $props = '';
-        if (\is_array($pkt->properties)) {
+        if (is_array($pkt->properties)) {
             // Session Expiry Interval (0x11) - four byte integer
-            if (\array_key_exists('session_expiry_interval', $pkt->properties)) {
+            if (array_key_exists('session_expiry_interval', $pkt->properties)) {
                 $val = $pkt->properties['session_expiry_interval'];
-                $u32 = \is_int($val) ? $val : (int) (\is_string($val) && is_numeric($val) ? $val : 0);
+                $u32 = is_int($val) ? $val : (int) (is_string($val) && is_numeric($val) ? $val : 0);
                 if ($u32 < 0) {
                     $u32 = 0;
                 }
                 if ($u32 > 0xFFFFFFFF) {
                     $u32 = 0xFFFFFFFF;
                 }
-                $props .= \chr(0x11).pack('N', $u32);
+                $props .= chr(0x11).pack('N', $u32);
             }
 
             // Receive Maximum (0x21) - two byte integer
-            if (\array_key_exists('receive_maximum', $pkt->properties)) {
+            if (array_key_exists('receive_maximum', $pkt->properties)) {
                 $val = $pkt->properties['receive_maximum'];
-                $u16 = \is_int($val) ? $val : (int) (\is_string($val) && is_numeric($val) ? $val : 65535);
+                $u16 = is_int($val) ? $val : (int) (is_string($val) && is_numeric($val) ? $val : 65535);
                 if ($u16 < 1) {
                     $u16 = 1;
                 }
                 if ($u16 > 65535) {
                     $u16 = 65535;
                 }
-                $props .= \chr(0x21).pack('n', $u16);
+                $props .= chr(0x21).pack('n', $u16);
             }
 
             // Topic Alias Maximum (0x22) - two byte integer
-            if (\array_key_exists('topic_alias_maximum', $pkt->properties)) {
+            if (array_key_exists('topic_alias_maximum', $pkt->properties)) {
                 $val = $pkt->properties['topic_alias_maximum'];
-                $u16 = \is_int($val) ? $val : (int) (\is_string($val) && is_numeric($val) ? $val : 0);
+                $u16 = is_int($val) ? $val : (int) (is_string($val) && is_numeric($val) ? $val : 0);
                 if ($u16 < 0) {
                     $u16 = 0;
                 }
                 if ($u16 > 65535) {
                     $u16 = 65535;
                 }
-                $props .= \chr(0x22).pack('n', $u16);
+                $props .= chr(0x22).pack('n', $u16);
             }
         }
-        $vh .= Bytes::encodeVarInt(\strlen($props)).$props;
+        $vh .= Bytes::encodeVarInt(strlen($props)).$props;
 
         // Payload
         $payload = Bytes::encodeString($pkt->clientId);
@@ -124,8 +139,8 @@ final class Encoder implements EncoderInterface
         }
 
         // Fixed header
-        $remaining = \strlen($vh) + \strlen($payload);
-        $fixed     = \chr(PacketType::CONNECT->value << 4).Bytes::encodeVarInt($remaining);
+        $remaining = strlen($vh) + strlen($payload);
+        $fixed     = chr(PacketType::CONNECT->value << 4).Bytes::encodeVarInt($remaining);
 
         return $fixed.$vh.$payload;
     }
@@ -141,7 +156,7 @@ final class Encoder implements EncoderInterface
      * MQTT 5.0 includes a property field for enhanced features like content type,
      * message expiry, topic aliases, response topic, correlation data, and user properties.
      *
-     * @throws \LogicException If QoS > 0 and packetId is not provided
+     * @throws LogicException If QoS > 0 and packetId is not provided
      */
     public function encodePublish(Publish $pkt): string
     {
@@ -157,22 +172,22 @@ final class Encoder implements EncoderInterface
         // For QoS 1/2, include Packet Identifier before properties
         if ($pkt->qos->value > 0) {
             if ($pkt->packetId === null) {
-                throw new \LogicException('QoS>0 requires packetId in Publish packet');
+                throw new LogicException('QoS>0 requires packetId in Publish packet');
             }
             $variableHeader .= pack('n', $pkt->packetId);
         }
 
         // MQTT 5.0 requires a Properties field in the PUBLISH variable header (after packetId if QoS>0)
         $props = $this->encodePublishProperties($pkt->properties ?? []);
-        $variableHeader .= Bytes::encodeVarInt(\strlen($props)).$props;
+        $variableHeader .= Bytes::encodeVarInt(strlen($props)).$props;
 
         // Payload: application message (can be empty)
         $payload = $pkt->payload;
 
         // Calculate the remaining length
-        $remainingLength = \strlen($variableHeader) + \strlen($payload);
+        $remainingLength = strlen($variableHeader) + strlen($payload);
 
-        return \chr($fixedHeader).
+        return chr($fixedHeader).
             Bytes::encodeVarInt($remainingLength).
             $variableHeader.
             $payload;
@@ -209,17 +224,17 @@ final class Encoder implements EncoderInterface
         // Properties for SUBSCRIBE (v5). Support: user_properties (0x26)
         // Other properties like subscription_identifier (0x0B) can be added later
         $props = '';
-        if ($options instanceof SubscribeOptions && \is_array($options->properties) && \array_key_exists('user_properties', $options->properties)) {
+        if ($options instanceof SubscribeOptions && is_array($options->properties) && array_key_exists('user_properties', $options->properties)) {
             $up = $options->properties['user_properties'];
-            if (\is_array($up)) {
+            if (is_array($up)) {
                 foreach ($this->normalizeUserProperties($up) as [$k, $v]) {
                     // User Property (0x26): key-value string pair
-                    $props .= \chr(0x26).Bytes::encodeString($k).Bytes::encodeString($v);
+                    $props .= chr(0x26).Bytes::encodeString($k).Bytes::encodeString($v);
                 }
             }
         }
         // Append properties with varint length prefix
-        $vh .= Bytes::encodeVarInt(\strlen($props)).$props;
+        $vh .= Bytes::encodeVarInt(strlen($props)).$props;
 
         // Payload: Topic filters with subscription options
         $payload = '';
@@ -262,14 +277,14 @@ final class Encoder implements EncoderInterface
             }
 
             // Encode: UTF-8 string (2-byte length + bytes) + 1-byte subscription options
-            $payload .= Bytes::encodeString($filter).\chr($opts);
+            $payload .= Bytes::encodeString($filter).chr($opts);
         }
 
         // Calculate remaining length
-        $remaining = \strlen($vh) + \strlen($payload);
+        $remaining = strlen($vh) + strlen($payload);
 
         // Fixed header: type SUBSCRIBE (8) with reserved flags 0b0010 (0x02)
-        $fixed = \chr((PacketType::SUBSCRIBE->value << 4) | 0x02).Bytes::encodeVarInt($remaining);
+        $fixed = chr((PacketType::SUBSCRIBE->value << 4) | 0x02).Bytes::encodeVarInt($remaining);
 
         return $fixed.$vh.$payload;
     }
@@ -299,7 +314,7 @@ final class Encoder implements EncoderInterface
         // Properties for UNSUBSCRIBE (v5). Currently empty (MVP).
         // Future: user_properties (0x26) can be added here
         $props = '';
-        $vh .= Bytes::encodeVarInt(\strlen($props)).$props;
+        $vh .= Bytes::encodeVarInt(strlen($props)).$props;
 
         // Payload: List of topic filters (UTF-8 strings)
         $payload = '';
@@ -312,10 +327,10 @@ final class Encoder implements EncoderInterface
         }
 
         // Calculate remaining length
-        $remaining = \strlen($vh) + \strlen($payload);
+        $remaining = strlen($vh) + strlen($payload);
 
         // Fixed header: type UNSUBSCRIBE (10) with reserved flags 0b0010 (0x02)
-        $fixed = \chr((PacketType::UNSUBSCRIBE->value << 4) | 0x02).Bytes::encodeVarInt($remaining);
+        $fixed = chr((PacketType::UNSUBSCRIBE->value << 4) | 0x02).Bytes::encodeVarInt($remaining);
 
         return $fixed.$vh.$payload;
     }
@@ -343,39 +358,39 @@ final class Encoder implements EncoderInterface
         $out = '';
 
         // Payload Format Indicator (0x01) - byte
-        if (\array_key_exists('payload_format_indicator', $properties)) {
-            $out .= \chr(0x01).\chr($this->toByte($properties['payload_format_indicator']));
+        if (array_key_exists('payload_format_indicator', $properties)) {
+            $out .= chr(0x01).chr($this->toByte($properties['payload_format_indicator']));
         }
 
         // Message Expiry Interval (0x02) - four byte integer
-        if (\array_key_exists('message_expiry_interval', $properties)) {
-            $out .= \chr(0x02).pack('N', $this->toUInt32($properties['message_expiry_interval']));
+        if (array_key_exists('message_expiry_interval', $properties)) {
+            $out .= chr(0x02).pack('N', $this->toUInt32($properties['message_expiry_interval']));
         }
 
         // Content Type (0x03) - UTF-8 string
-        if (\array_key_exists('content_type', $properties)) {
-            $out .= \chr(0x03).Bytes::encodeString($this->toString($properties['content_type']));
+        if (array_key_exists('content_type', $properties)) {
+            $out .= chr(0x03).Bytes::encodeString($this->toString($properties['content_type']));
         }
 
         // Response Topic (0x08) - UTF-8 string
-        if (\array_key_exists('response_topic', $properties)) {
-            $out .= \chr(0x08).Bytes::encodeString($this->toString($properties['response_topic']));
+        if (array_key_exists('response_topic', $properties)) {
+            $out .= chr(0x08).Bytes::encodeString($this->toString($properties['response_topic']));
         }
 
         // Correlation Data (0x09) - Binary Data (2-byte length + bytes)
-        if (\array_key_exists('correlation_data', $properties)) {
-            $out .= \chr(0x09).Bytes::encodeString($this->toBinary($properties['correlation_data']));
+        if (array_key_exists('correlation_data', $properties)) {
+            $out .= chr(0x09).Bytes::encodeString($this->toBinary($properties['correlation_data']));
         }
 
         // Topic Alias (0x23) - two-byte integer
-        if (\array_key_exists('topic_alias', $properties)) {
-            $out .= \chr(0x23).pack('n', $this->toUInt16($properties['topic_alias']));
+        if (array_key_exists('topic_alias', $properties)) {
+            $out .= chr(0x23).pack('n', $this->toUInt16($properties['topic_alias']));
         }
 
         // User Property (0x26) - can appear multiple times
-        if (\array_key_exists('user_properties', $properties) && \is_array($properties['user_properties'])) {
+        if (array_key_exists('user_properties', $properties) && is_array($properties['user_properties'])) {
             foreach ($this->normalizeUserProperties($properties['user_properties']) as [$k, $v]) {
-                $out .= \chr(0x26).Bytes::encodeString($k).Bytes::encodeString($v);
+                $out .= chr(0x26).Bytes::encodeString($k).Bytes::encodeString($v);
             }
         }
 
@@ -396,8 +411,8 @@ final class Encoder implements EncoderInterface
             }
         } else {
             foreach ($up as $item) {
-                if (\is_array($item)) {
-                    if (array_is_list($item) && \count($item) >= 2) {
+                if (is_array($item)) {
+                    if (array_is_list($item) && count($item) >= 2) {
                         $pairs[] = [$this->toString($item[0] ?? ''), $this->toString($item[1] ?? '')];
                     } elseif (isset($item['key'], $item['value'])) {
                         $pairs[] = [$this->toString($item['key']), $this->toString($item['value'])];
@@ -411,13 +426,13 @@ final class Encoder implements EncoderInterface
 
     private function toString(mixed $v): string
     {
-        if (\is_string($v)) {
+        if (is_string($v)) {
             return $v;
         }
-        if (\is_int($v) || \is_float($v) || \is_bool($v) || $v === null) {
+        if (is_int($v) || is_float($v) || is_bool($v) || $v === null) {
             return (string) $v;
         }
-        if (\is_object($v) && method_exists($v, '__toString')) {
+        if (is_object($v) && method_exists($v, '__toString')) {
             return (string) $v;
         }
 
@@ -426,10 +441,10 @@ final class Encoder implements EncoderInterface
 
     private function toBinary(mixed $v): string
     {
-        if (\is_string($v)) {
+        if (is_string($v)) {
             return $v;
         }
-        if (\is_int($v) || \is_float($v) || \is_bool($v) || $v === null) {
+        if (is_int($v) || is_float($v) || is_bool($v) || $v === null) {
             return (string) $v;
         }
 
@@ -439,7 +454,7 @@ final class Encoder implements EncoderInterface
     private function toUInt16(mixed $v): int
     {
         $this->rejectInvalidType($v);
-        $i = \is_int($v) ? $v : (int) (\is_string($v) && is_numeric($v) ? $v : 0);
+        $i = is_int($v) ? $v : (int) (is_string($v) && is_numeric($v) ? $v : 0);
         if ($i < 0) {
             $i = 0;
         }
@@ -453,7 +468,7 @@ final class Encoder implements EncoderInterface
     private function toUInt32(mixed $v): int
     {
         $this->rejectInvalidType($v);
-        $i = \is_int($v) ? $v : (int) (\is_string($v) && is_numeric($v) ? $v : 0);
+        $i = is_int($v) ? $v : (int) (is_string($v) && is_numeric($v) ? $v : 0);
         if ($i < 0) {
             $i = 0;
         }
@@ -468,10 +483,10 @@ final class Encoder implements EncoderInterface
     private function toByte(mixed $v): int
     {
         $this->rejectInvalidType($v);
-        if (\is_bool($v)) {
+        if (is_bool($v)) {
             return $v ? 1 : 0;
         }
-        $i = \is_int($v) ? $v : (int) (\is_string($v) && is_numeric($v) ? $v : 0);
+        $i = is_int($v) ? $v : (int) (is_string($v) && is_numeric($v) ? $v : 0);
         if ($i < 0) {
             $i = 0;
         }
@@ -484,8 +499,8 @@ final class Encoder implements EncoderInterface
 
     private function rejectInvalidType(mixed $v): void
     {
-        if (\is_array($v) || \is_resource($v) || (\is_object($v) && ! method_exists($v, '__toString'))) {
-            throw new \InvalidArgumentException(\sprintf(
+        if (is_array($v) || is_resource($v) || (is_object($v) && ! method_exists($v, '__toString'))) {
+            throw new InvalidArgumentException(sprintf(
                 'MQTT property value must be a scalar type, got %s',
                 get_debug_type($v),
             ));
