@@ -142,7 +142,7 @@ final readonly class FileSessionStore implements SessionStoreInterface
         if ($this->defaultExpirySeconds > 0) {
             $state = $this->load($clientId);
 
-            return $state instanceof \ScienceStories\Mqtt\Session\SessionState;
+            return $state instanceof SessionState;
         }
 
         return true;

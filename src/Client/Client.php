@@ -13,6 +13,7 @@ use ScienceStories\Mqtt\Contract\ClientInterface;
 use ScienceStories\Mqtt\Contract\DecoderInterface;
 use ScienceStories\Mqtt\Contract\EncoderInterface;
 use ScienceStories\Mqtt\Contract\MetricsInterface;
+use ScienceStories\Mqtt\Contract\SessionStoreInterface;
 use ScienceStories\Mqtt\Contract\TransportInterface;
 use ScienceStories\Mqtt\Events\MessageReceived as EvMessageReceived;
 use ScienceStories\Mqtt\Events\PacketReceived as EvPacketReceived;
@@ -36,6 +37,7 @@ use ScienceStories\Mqtt\Protocol\V5\Encoder as V5Encoder;
 use ScienceStories\Mqtt\Session\SessionState;
 use ScienceStories\Mqtt\Util\Bytes;
 use ScienceStories\Mqtt\Util\RandomId;
+use ScienceStories\Mqtt\Util\TopicValidator;
 use SplQueue;
 use Throwable;
 
@@ -267,7 +269,7 @@ final class Client implements ClientInterface
 
         // Restore session state if session store is configured and session was present
         $clientId = $assignedId ?? $this->options->clientId;
-        if ($this->options->sessionStore instanceof \ScienceStories\Mqtt\Contract\SessionStoreInterface && $connack->sessionPresent && ! $this->options->cleanSession) {
+        if ($this->options->sessionStore instanceof SessionStoreInterface && $connack->sessionPresent && ! $this->options->cleanSession) {
             $this->restoreSession($clientId);
         }
 
@@ -284,7 +286,7 @@ final class Client implements ClientInterface
     public function disconnect(string $reason = ''): void
     {
         // Save session state before disconnecting (if persistent session)
-        if ($this->options->sessionStore instanceof \ScienceStories\Mqtt\Contract\SessionStoreInterface && ! $this->options->cleanSession) {
+        if ($this->options->sessionStore instanceof SessionStoreInterface && ! $this->options->cleanSession) {
             $this->saveSession($this->options->clientId);
         }
 
@@ -309,17 +311,17 @@ final class Client implements ClientInterface
      */
     private function resetConnectionState(): void
     {
-        if ($this->topicAliasManager instanceof \ScienceStories\Mqtt\Client\TopicAliasManager) {
+        if ($this->topicAliasManager instanceof TopicAliasManager) {
             $this->topicAliasManager->reset();
         }
-        if ($this->flowControl instanceof \ScienceStories\Mqtt\Client\FlowControl) {
+        if ($this->flowControl instanceof FlowControl) {
             $this->flowControl->reset();
         }
     }
 
     public function publish(string $topic, string $payload, ?PublishOptions $options = null): int
     {
-        \ScienceStories\Mqtt\Util\TopicValidator::validatePublishTopic($topic);
+        TopicValidator::validatePublishTopic($topic);
         $options ??= new PublishOptions();
 
         $qos      = $options->qos->value;
@@ -328,7 +330,7 @@ final class Client implements ClientInterface
             $packetId = RandomId::packetId();
 
             // Flow control: wait for slot if using QoS 1/2
-            if ($this->flowControl instanceof \ScienceStories\Mqtt\Client\FlowControl && ! $this->flowControl->canSend()) {
+            if ($this->flowControl instanceof FlowControl && ! $this->flowControl->canSend()) {
                 $this->logger->debug('Flow control: waiting for slot', [
                     'inFlight' => $this->flowControl->getInFlightCount(),
                     'max'      => $this->flowControl->getMaxInFlight(),
@@ -349,7 +351,7 @@ final class Client implements ClientInterface
         // Handle topic aliases for MQTT 5.0
         $publishTopic = $topic;
         $publishProps = $options->properties;
-        if ($this->topicAliasManager instanceof \ScienceStories\Mqtt\Client\TopicAliasManager && $this->options->version === MqttVersion::V5_0) {
+        if ($this->topicAliasManager instanceof TopicAliasManager && $this->options->version === MqttVersion::V5_0) {
             $aliasResult = $this->topicAliasManager->getOrCreateAlias($topic);
             if ($aliasResult['alias'] !== null) {
                 $publishProps ??= [];
@@ -391,11 +393,11 @@ final class Client implements ClientInterface
 
         // Track in-flight for flow control
         // @phpstan-ignore-next-line notIdentical.alwaysTrue - packetId is set when qos > 0
-        if ($qos > 0 && $this->flowControl instanceof \ScienceStories\Mqtt\Client\FlowControl && $packetId !== null) {
+        if ($qos > 0 && $this->flowControl instanceof FlowControl && $packetId !== null) {
             $this->flowControl->trackSend($packetId);
         }
 
-        if ($this->metrics instanceof \ScienceStories\Mqtt\Contract\MetricsInterface) {
+        if ($this->metrics instanceof MetricsInterface) {
             $this->metrics->increment('publish_sent', 1.0, ['qos' => $qos]);
             $this->metrics->size('publish_payload_bytes', \strlen($payload), ['qos' => $qos]);
         }
@@ -482,7 +484,7 @@ final class Client implements ClientInterface
     {
         $filters = [];
         foreach ($topics as $t) {
-            \ScienceStories\Mqtt\Util\TopicValidator::validateSubscribeFilter((string) $t);
+            TopicValidator::validateSubscribeFilter((string) $t);
             $filters[] = ['filter' => (string) $t, 'qos' => $qos];
         }
         $this->subscribeWith($filters);
@@ -509,7 +511,7 @@ final class Client implements ClientInterface
                 continue;
             }
             // loopOnce handles SUBACK internally and stores last; break when found
-            if ($this->lastSubAck instanceof \ScienceStories\Mqtt\Protocol\Packet\SubAck && $this->lastSubAck->packetId === $pid) {
+            if ($this->lastSubAck instanceof SubAck && $this->lastSubAck->packetId === $pid) {
                 $subAck = $this->lastSubAck;
                 unset($this->lastSubAck);
                 $this->logger->info('SUBACK', ['packetId' => $pid, 'codes' => $subAck->returnCodes]);
@@ -553,7 +555,7 @@ final class Client implements ClientInterface
             if (! $ok) {
                 continue;
             }
-            if ($this->lastUnsubAck instanceof \ScienceStories\Mqtt\Protocol\Packet\UnsubAck && $this->lastUnsubAck->packetId === $pid) {
+            if ($this->lastUnsubAck instanceof UnsubAck && $this->lastUnsubAck->packetId === $pid) {
                 $unsuback = $this->lastUnsubAck;
                 unset($this->lastUnsubAck);
                 $codes = $unsuback->reasonCodes ?? [];
@@ -610,7 +612,7 @@ final class Client implements ClientInterface
         $this->touchActivity();
         // PSR-14: emit PacketReceived with full frame bytes
         $raw = $b0.$varBytes.$body;
-        if ($this->metrics instanceof \ScienceStories\Mqtt\Contract\MetricsInterface) {
+        if ($this->metrics instanceof MetricsInterface) {
             $this->metrics->increment('packets_received', 1.0, ['type' => $type]);
             $this->metrics->size('packet_bytes', \strlen($raw), ['dir' => 'in', 'type' => $type]);
         }
@@ -691,7 +693,7 @@ final class Client implements ClientInterface
                     'success'    => $this->lastPubAck->isSuccess(),
                 ]);
                 // Track ACK for flow control
-                if ($this->flowControl instanceof \ScienceStories\Mqtt\Client\FlowControl) {
+                if ($this->flowControl instanceof FlowControl) {
                     $this->flowControl->trackAck($this->lastPubAck->packetId);
                 }
 
@@ -747,7 +749,7 @@ final class Client implements ClientInterface
                     'success'    => $this->lastPubComp->isSuccess(),
                 ]);
                 // Track ACK for flow control (QoS 2 complete)
-                if ($this->flowControl instanceof \ScienceStories\Mqtt\Client\FlowControl) {
+                if ($this->flowControl instanceof FlowControl) {
                     $this->flowControl->trackAck($this->lastPubComp->packetId);
                 }
 
@@ -985,7 +987,7 @@ final class Client implements ClientInterface
         $filters = $this->options->messageFilters;
         if ($filters === [] || $this->topicMatchesAny($msg->topic, $filters)) {
             $this->inbound->enqueue($msg);
-            if ($this->metrics instanceof \ScienceStories\Mqtt\Contract\MetricsInterface) {
+            if ($this->metrics instanceof MetricsInterface) {
                 $this->metrics->increment('messages_delivered', 1.0, ['qos' => $msg->qos->value, 'retain' => $msg->retain ? 1 : 0]);
                 $this->metrics->size('message_payload_bytes', \strlen($msg->payload), ['dir' => 'in', 'qos' => $msg->qos->value]);
             }
@@ -994,7 +996,7 @@ final class Client implements ClientInterface
             if ($this->messageHandler) {
                 try {
                     ($this->messageHandler)($msg);
-                } catch (\Throwable $e) {
+                } catch (Throwable $e) {
                     $this->logger->error('Message handler threw exception', [
                         'topic' => $msg->topic,
                         'error' => $e->getMessage(),
@@ -1052,7 +1054,7 @@ final class Client implements ClientInterface
     private function saveSession(string $clientId): void
     {
         $store = $this->options->sessionStore;
-        if (!$store instanceof \ScienceStories\Mqtt\Contract\SessionStoreInterface) {
+        if (!$store instanceof SessionStoreInterface) {
             return;
         }
 
@@ -1082,13 +1084,13 @@ final class Client implements ClientInterface
     private function restoreSession(string $clientId): void
     {
         $store = $this->options->sessionStore;
-        if (!$store instanceof \ScienceStories\Mqtt\Contract\SessionStoreInterface) {
+        if (!$store instanceof SessionStoreInterface) {
             return;
         }
 
         try {
             $state = $store->load($clientId);
-            if (!$state instanceof \ScienceStories\Mqtt\Session\SessionState) {
+            if (!$state instanceof SessionState) {
                 $this->logger->debug('No saved session found', ['clientId' => $clientId]);
 
                 return;
@@ -1109,19 +1111,4 @@ final class Client implements ClientInterface
         }
     }
 
-    /**
-     * Get the topic alias manager (MQTT 5.0).
-     */
-    public function getTopicAliasManager(): ?TopicAliasManager
-    {
-        return $this->topicAliasManager;
-    }
-
-    /**
-     * Get the flow control manager (MQTT 5.0).
-     */
-    public function getFlowControl(): ?FlowControl
-    {
-        return $this->flowControl;
-    }
 }

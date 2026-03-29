@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace ScienceStories\Mqtt\Protocol\V5;
 
 use ScienceStories\Mqtt\Client\SubscribeOptions;
+use ScienceStories\Mqtt\Client\WillOptions;
 use ScienceStories\Mqtt\Contract\EncoderInterface;
 use ScienceStories\Mqtt\Protocol\Packet\Connect; // reuse DTO
 use ScienceStories\Mqtt\Protocol\Packet\PacketType; // reuse DTO
@@ -45,9 +46,9 @@ final class Encoder implements EncoderInterface
             $flags |= 0x40;
         }
         // Will support (v5): set Will Flag, QoS, Retain in flags; will properties in payload
-        $hasWill = $pkt->will instanceof \ScienceStories\Mqtt\Client\WillOptions;
+        $hasWill = $pkt->will instanceof WillOptions;
         $will    = $pkt->will;
-        if ($hasWill && $will instanceof \ScienceStories\Mqtt\Client\WillOptions) {
+        if ($hasWill && $will instanceof WillOptions) {
             $flags |= 0x04; // Will Flag
             $q = $will->qos->value & 0x03;
             $flags |= ($q << 3);
@@ -106,7 +107,7 @@ final class Encoder implements EncoderInterface
 
         // Payload
         $payload = Bytes::encodeString($pkt->clientId);
-        if ($hasWill && $will instanceof \ScienceStories\Mqtt\Client\WillOptions) {
+        if ($hasWill && $will instanceof WillOptions) {
             // Will Properties (varint length). MVP: none
             $payload .= Bytes::encodeVarInt(0);
             // Will Topic and Will Payload
@@ -208,7 +209,7 @@ final class Encoder implements EncoderInterface
         // Properties for SUBSCRIBE (v5). Support: user_properties (0x26)
         // Other properties like subscription_identifier (0x0B) can be added later
         $props = '';
-        if ($options instanceof \ScienceStories\Mqtt\Client\SubscribeOptions && \is_array($options->properties) && \array_key_exists('user_properties', $options->properties)) {
+        if ($options instanceof SubscribeOptions && \is_array($options->properties) && \array_key_exists('user_properties', $options->properties)) {
             $up = $options->properties['user_properties'];
             if (\is_array($up)) {
                 foreach ($this->normalizeUserProperties($up) as [$k, $v]) {
@@ -246,7 +247,7 @@ final class Encoder implements EncoderInterface
             $opts |= ($qos & 0x03);
 
             // Apply MQTT 5.0 subscription options if provided
-            if ($options instanceof \ScienceStories\Mqtt\Client\SubscribeOptions) {
+            if ($options instanceof SubscribeOptions) {
                 // Bit 2: No Local flag (don't receive own publications)
                 if ($options->noLocal) {
                     $opts |= 0x04;

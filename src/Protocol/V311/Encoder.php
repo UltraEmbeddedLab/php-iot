@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace ScienceStories\Mqtt\Protocol\V311;
 
 use ScienceStories\Mqtt\Client\SubscribeOptions;
+use ScienceStories\Mqtt\Client\WillOptions;
 use ScienceStories\Mqtt\Contract\EncoderInterface;
 use ScienceStories\Mqtt\Protocol\Packet\Connect;
 use ScienceStories\Mqtt\Protocol\Packet\PacketType;
@@ -46,9 +47,9 @@ final class Encoder implements EncoderInterface
             $flags |= 0x40;
         }
         // Will settings (v3 payload Will Topic + Message precede username/password)
-        $hasWill = $pkt->will instanceof \ScienceStories\Mqtt\Client\WillOptions;
+        $hasWill = $pkt->will instanceof WillOptions;
         $will    = $pkt->will;
-        if ($hasWill && $will instanceof \ScienceStories\Mqtt\Client\WillOptions) {
+        if ($hasWill && $will instanceof WillOptions) {
             $flags |= 0x04; // Will Flag
             $q = $will->qos->value & 0x03;
             $flags |= ($q << 3); // Will QoS bits 3-4
@@ -63,7 +64,7 @@ final class Encoder implements EncoderInterface
 
         // Payload
         $payload = Bytes::encodeString($pkt->clientId);
-        if ($hasWill && $will instanceof \ScienceStories\Mqtt\Client\WillOptions) {
+        if ($hasWill && $will instanceof WillOptions) {
             $payload .= Bytes::encodeString($will->topic);
             $payload .= Bytes::encodeString($will->payload);
         }

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace ScienceStories\Mqtt\Easy;
 
 use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 use Random\RandomException;
 use RuntimeException;
 use ScienceStories\Mqtt\Client\Client;
@@ -172,7 +173,7 @@ final class Mqtt
             ]);
         }
 
-        $client = new Client($opts, new TcpTransport(), logger: $logger ?? new \Psr\Log\NullLogger());
+        $client = new Client($opts, new TcpTransport(), logger: $logger ?? new NullLogger());
         $result = $client->connect();
 
         // Broker accepted validate connection
