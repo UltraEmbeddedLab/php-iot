@@ -46,16 +46,15 @@ final class TopicAliasManager
     /** @var int Next alias to assign */
     private int $nextAlias = 1;
 
-    /** @var int Maximum number of aliases allowed */
-    private int $maxAliases;
-
     /**
      * @param int $maxAliases Maximum topic aliases (from broker's topic_alias_maximum).
      *                        Use 0 to disable topic aliases.
      */
-    public function __construct(int $maxAliases = 0)
-    {
-        $this->maxAliases = max(0, $maxAliases);
+    public function __construct(
+        public private(set) int $maxAliases = 0 {
+            set => max(0, $value);
+        },
+    ) {
     }
 
     /**
@@ -173,14 +172,6 @@ final class TopicAliasManager
     }
 
     /**
-     * Get maximum aliases allowed.
-     */
-    public function getMaxAliases(): int
-    {
-        return $this->maxAliases;
-    }
-
-    /**
      * Check if more aliases can be created.
      */
     public function hasAvailableSlots(): bool
@@ -188,11 +179,4 @@ final class TopicAliasManager
         return $this->nextAlias <= $this->maxAliases;
     }
 
-    /**
-     * Update the maximum aliases (e.g., after receiving CONNACK with topic_alias_maximum).
-     */
-    public function setMaxAliases(int $maxAliases): void
-    {
-        $this->maxAliases = max(0, $maxAliases);
-    }
 }

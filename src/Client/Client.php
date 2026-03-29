@@ -340,7 +340,7 @@ final class Client implements ClientInterface
             // Flow control: wait for slot if using QoS 1/2
             if ($this->flowControl instanceof FlowControl && ! $this->flowControl->canSend()) {
                 $this->logger->debug('Flow control: waiting for slot', [
-                    'inFlight' => $this->flowControl->getInFlightCount(),
+                    'inFlight' => $this->flowControl->currentInFlight,
                     'max'      => $this->flowControl->maxInFlight,
                 ]);
                 // Poll loopOnce to process incoming ACKs while waiting

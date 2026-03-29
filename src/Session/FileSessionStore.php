@@ -61,9 +61,9 @@ use const LOCK_EX;
  */
 final readonly class FileSessionStore implements SessionStoreInterface
 {
-    private string $directory;
+    public string $directory;
 
-    private int $defaultExpirySeconds;
+    public int $defaultExpirySeconds;
 
     /**
      * @param string $directory Directory to store session files
@@ -190,22 +190,6 @@ final readonly class FileSessionStore implements SessionStoreInterface
         if (! is_writable($this->directory)) {
             throw new RuntimeException("Session directory is not writable: {$this->directory}");
         }
-    }
-
-    /**
-     * Get the storage directory path.
-     */
-    public function getDirectory(): string
-    {
-        return $this->directory;
-    }
-
-    /**
-     * Get the default expiry in seconds.
-     */
-    public function getDefaultExpiry(): int
-    {
-        return $this->defaultExpirySeconds;
     }
 
     /**

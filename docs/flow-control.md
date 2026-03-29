@@ -61,8 +61,8 @@ Flow control tracks:
 $flow = $client->flowControl;
 
 // Check current status
-$inFlight = $flow->getInFlightCount();  // Current in-flight messages
-$max = $flow->getMaxInFlight();         // Maximum allowed
+$inFlight = $flow->currentInFlight;     // Current in-flight messages
+$max = $flow->maxInFlight;              // Maximum allowed
 $canSend = $flow->canSend();            // Is a slot available?
 
 // Get pending packet IDs
@@ -103,7 +103,7 @@ If not specified in CONNECT/CONNACK, the default of 65535 effectively disables f
 
 1. **Set Appropriate Limits**: Match your client's processing capacity
 2. **Handle Timeouts**: Implement retry logic for timed-out messages
-3. **Monitor In-Flight**: Track `getInFlightCount()` for debugging
+3. **Monitor In-Flight**: Track `currentInFlight` property for debugging
 4. **Consider Broker Limits**: The effective limit is the broker's `receive_maximum`
 
 ## Example

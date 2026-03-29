@@ -32,7 +32,7 @@ namespace ScienceStories\Mqtt\Client;
 final class FlowControl
 {
     /** @var int Current count of in-flight messages */
-    private int $currentInFlight = 0;
+    public private(set) int $currentInFlight = 0;
 
     /** @var array<int, float> Packet ID => timestamp of tracked messages */
     private array $pending = [];
@@ -80,14 +80,6 @@ final class FlowControl
             unset($this->pending[$packetId]);
             $this->currentInFlight = max(0, $this->currentInFlight - 1);
         }
-    }
-
-    /**
-     * Get current number of in-flight messages.
-     */
-    public function getInFlightCount(): int
-    {
-        return $this->currentInFlight;
     }
 
     /**

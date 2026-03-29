@@ -22,9 +22,9 @@ test('canSend initially true', function (): void {
 test('trackSend increments in-flight count', function (): void {
     $flow = new FlowControl();
     $flow->trackSend(1);
-    expect($flow->getInFlightCount())->toBe(1);
+    expect($flow->currentInFlight)->toBe(1);
     $flow->trackSend(2);
-    expect($flow->getInFlightCount())->toBe(2);
+    expect($flow->currentInFlight)->toBe(2);
 });
 
 test('canSend false when at max', function (): void {
@@ -41,7 +41,7 @@ test('trackAck decrements count and reopens slot', function (): void {
     expect($flow->canSend())->toBe(false);
 
     $flow->trackAck(1);
-    expect($flow->getInFlightCount())->toBe(1);
+    expect($flow->currentInFlight)->toBe(1);
     expect($flow->canSend())->toBe(true);
 });
 
@@ -49,14 +49,14 @@ test('trackAck for unknown packetId is no-op', function (): void {
     $flow = new FlowControl();
     $flow->trackSend(1);
     $flow->trackAck(999);
-    expect($flow->getInFlightCount())->toBe(1);
+    expect($flow->currentInFlight)->toBe(1);
 });
 
 test('duplicate trackSend same packetId does not increment twice', function (): void {
     $flow = new FlowControl();
     $flow->trackSend(1);
     $flow->trackSend(1);
-    expect($flow->getInFlightCount())->toBe(1);
+    expect($flow->currentInFlight)->toBe(1);
 });
 
 test('getPendingPacketIds returns tracked ids', function (): void {
@@ -89,7 +89,7 @@ test('reset clears all state', function (): void {
     $flow->trackSend(2);
     $flow->reset();
 
-    expect($flow->getInFlightCount())->toBe(0);
+    expect($flow->currentInFlight)->toBe(0);
     expect($flow->getPendingPacketIds())->toBe([]);
     expect($flow->canSend())->toBe(true);
 });

@@ -114,7 +114,7 @@ try {
     if ($aliasManager !== null) {
         $alias = $aliasManager->getAlias($topic);
         echo '   Alias assigned: '.($alias ?? 'none')."\n";
-        echo "   Total aliases used: {$aliasManager->getAliasCount()}/{$aliasManager->getMaxAliases()}\n\n";
+        echo "   Total aliases used: {$aliasManager->getAliasCount()}/{$aliasManager->maxAliases}\n\n";
     }
 
     // Subsequent publishes - reuse alias (topic can be omitted internally)
@@ -146,7 +146,7 @@ try {
 
     if ($aliasManager !== null) {
         echo "\nFinal alias status:\n";
-        echo "   Total aliases used: {$aliasManager->getAliasCount()}/{$aliasManager->getMaxAliases()}\n";
+        echo "   Total aliases used: {$aliasManager->getAliasCount()}/{$aliasManager->maxAliases}\n";
         echo '   Available slots: '.($aliasManager->hasAvailableSlots() ? 'yes' : 'no')."\n";
     }
 

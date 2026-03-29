@@ -63,7 +63,7 @@ $manager = $client->topicAliasManager;
 
 // Check current status
 $count = $manager->getAliasCount();      // Number of aliases used
-$max = $manager->getMaxAliases();        // Maximum aliases allowed
+$max = $manager->maxAliases;             // Maximum aliases allowed
 $available = $manager->hasAvailableSlots(); // Can more aliases be created?
 
 // Get alias for a topic

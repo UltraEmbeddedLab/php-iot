@@ -97,7 +97,7 @@ try {
     if ($flowControl === null) {
         echo "Flow Control not initialized.\n";
     } else {
-        echo "Flow Control initialized with max: {$flowControl->getMaxInFlight()}\n\n";
+        echo "Flow Control initialized with max: {$flowControl->maxInFlight}\n\n";
     }
 
     // Example: Publish QoS 1 messages with flow control
@@ -116,7 +116,7 @@ try {
         echo "Message {$i}: Publishing QoS 1 message\n";
 
         if ($flowControl !== null) {
-            echo "   In-flight before: {$flowControl->getInFlightCount()}/{$flowControl->getMaxInFlight()}\n";
+            echo "   In-flight before: {$flowControl->currentInFlight}/{$flowControl->maxInFlight}\n";
             echo '   Can send: '.($flowControl->canSend() ? 'yes' : 'no')."\n";
         }
 
@@ -125,7 +125,7 @@ try {
         echo "   Published with Packet ID: {$packetId}\n";
 
         if ($flowControl !== null) {
-            echo "   In-flight after: {$flowControl->getInFlightCount()}/{$flowControl->getMaxInFlight()}\n";
+            echo "   In-flight after: {$flowControl->currentInFlight}/{$flowControl->maxInFlight}\n";
         }
 
         echo "\n";
@@ -136,8 +136,8 @@ try {
     echo "   Messages published: {$success}/{$count}\n";
 
     if ($flowControl !== null) {
-        echo "   Final in-flight count: {$flowControl->getInFlightCount()}\n";
-        echo "   Max in-flight: {$flowControl->getMaxInFlight()}\n";
+        echo "   Final in-flight count: {$flowControl->currentInFlight}\n";
+        echo "   Max in-flight: {$flowControl->maxInFlight}\n";
     }
 
     echo "\nFlow Control Behavior:\n";
