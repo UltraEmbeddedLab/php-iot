@@ -8,5 +8,6 @@ enum TransportScheme: string
 {
     case TCP = 'tcp';
     case TLS = 'tls';
-    // (later: WS / WSS)
+    case WS  = 'ws';
+    case WSS = 'wss';
 }

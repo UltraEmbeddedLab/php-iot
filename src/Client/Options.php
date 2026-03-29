@@ -7,6 +7,8 @@ namespace ScienceStories\Mqtt\Client;
 use ScienceStories\Mqtt\Contract\SessionStoreInterface;
 use ScienceStories\Mqtt\Protocol\MqttVersion;
 
+use function max;
+
 /**
  * Options encapsulate connection settings for the MQTT client.
  * Immutable builder-style API.
@@ -44,6 +46,12 @@ final class Options
         public int $receiveMaximum = 65535,
         // Session persistence store
         public ?SessionStoreInterface $sessionStore = null,
+        // QoS 1 de-duplication cache size (default 256)
+        public int $qos1DeduplicationSize = 256,
+        // Rate limiter (null = no rate limiting)
+        public ?RateLimiter $rateLimiter = null,
+        // Offline queue max size (0 = disabled, >0 = max buffered messages during disconnect)
+        public int $offlineQueueSize = 0,
     ) {
     }
 
@@ -238,6 +246,49 @@ final class Options
     {
         $c               = clone $this;
         $c->sessionStore = $store;
+
+        return $c;
+    }
+
+    /**
+     * Set the QoS 1 de-duplication cache size.
+     *
+     * Controls how many recently-seen QoS 1 Packet Identifiers are tracked
+     * to suppress duplicate deliveries. Higher values use more memory but
+     * reduce duplicate risk under high throughput.
+     *
+     * @param int $size Cache size (minimum 16, default 256)
+     */
+    public function withQos1DeduplicationSize(int $size): self
+    {
+        $c                        = clone $this;
+        $c->qos1DeduplicationSize = max(16, $size);
+
+        return $c;
+    }
+
+    /**
+     * Set a rate limiter for outbound publishes.
+     *
+     * @param RateLimiter|null $limiter Rate limiter instance (null to disable)
+     */
+    public function withRateLimiter(?RateLimiter $limiter): self
+    {
+        $c              = clone $this;
+        $c->rateLimiter = $limiter;
+
+        return $c;
+    }
+
+    /**
+     * Enable offline message queue for buffering publishes during disconnects.
+     *
+     * @param int $maxSize Maximum number of queued messages (0 = disabled)
+     */
+    public function withOfflineQueue(int $maxSize): self
+    {
+        $c                   = clone $this;
+        $c->offlineQueueSize = max(0, $maxSize);
 
         return $c;
     }

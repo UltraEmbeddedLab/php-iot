@@ -117,6 +117,9 @@ final class Client implements ClientInterface
     /** MQTT 5.0 Flow Control for QoS 1/2 in-flight message limiting */
     private ?FlowControl $flowControl = null;
 
+    /** Offline message queue for buffering during disconnects */
+    private ?OfflineQueue $offlineQueue = null;
+
     private function touchActivity(): void
     {
         $this->lastActivity = microtime(true);
@@ -168,11 +171,16 @@ final class Client implements ClientInterface
             $this->encoder = new V311Encoder();
             $this->decoder = new V311Decoder();
         }
+        $this->qos1SeenMax = $this->options->qos1DeduplicationSize;
+        if ($this->options->offlineQueueSize > 0) {
+            $this->offlineQueue = new OfflineQueue($this->options->offlineQueueSize);
+        }
         $this->touchActivity();
     }
 
     public function connect(): ConnectResult
     {
+        $connectStart = microtime(true);
         $this->logger->info('Opening connection', ['host' => $this->options->host, 'port' => $this->options->port]);
         $this->transport->open($this->options->host, $this->options->port);
 
@@ -281,6 +289,14 @@ final class Client implements ClientInterface
             $this->restoreSession($clientId);
         }
 
+        if ($this->metrics instanceof MetricsInterface) {
+            $this->metrics->increment('connections', 1.0, ['version' => $versionStr]);
+            $this->metrics->observe('connect_duration_seconds', microtime(true) - $connectStart, []);
+        }
+
+        // Drain offline queue after successful connect
+        $this->drainOfflineQueue();
+
         return new ConnectResult(
             $connack->sessionPresent,
             'MQTT',
@@ -311,6 +327,9 @@ final class Client implements ClientInterface
 
         $this->transport->close();
         $this->resetConnectionState();
+        if ($this->metrics instanceof MetricsInterface) {
+            $this->metrics->increment('disconnections', 1.0, ['reason' => $reason !== '' ? 'client' : 'normal']);
+        }
         $this->logger->info('Disconnected', ['reason' => $reason]);
     }
 
@@ -331,6 +350,33 @@ final class Client implements ClientInterface
     {
         TopicValidator::validatePublishTopic($topic);
         $options ??= new PublishOptions();
+
+        // Offline queue: buffer messages when transport is disconnected
+        if (! $this->transport->isOpen() && $this->offlineQueue instanceof OfflineQueue) {
+            if ($this->offlineQueue->enqueue($topic, $payload, $options)) {
+                $this->logger->debug('Message queued offline', ['topic' => $topic, 'queued' => $this->offlineQueue->count()]);
+                if ($this->metrics instanceof MetricsInterface) {
+                    $this->metrics->increment('offline_queue_enqueued', 1.0, []);
+                }
+
+                return 0;
+            }
+            $this->logger->warning('Offline queue full, message dropped', ['topic' => $topic]);
+            if ($this->metrics instanceof MetricsInterface) {
+                $this->metrics->increment('offline_queue_dropped', 1.0, []);
+            }
+
+            return 0;
+        }
+
+        // Rate limiting
+        $rateLimiter = $this->options->rateLimiter;
+        if ($rateLimiter instanceof RateLimiter) {
+            $waited = $rateLimiter->acquire();
+            if ($waited > 0 && $this->metrics instanceof MetricsInterface) {
+                $this->metrics->observe('rate_limit_wait_seconds', $waited, []);
+            }
+        }
 
         $qos      = $options->qos->value;
         $packetId = null;
@@ -481,6 +527,9 @@ final class Client implements ClientInterface
         if ($type === PacketType::PINGRESP->value && $rl === 0) {
             $this->pingOutstanding = false;
             $this->logger->info('PINGRESP OK');
+            if ($this->metrics instanceof MetricsInterface) {
+                $this->metrics->increment('pings', 1.0, []);
+            }
 
             return true;
         }
@@ -529,6 +578,10 @@ final class Client implements ClientInterface
                     $this->recordSubscriptionsFromFilters($filters, $options);
                 }
 
+                if ($this->metrics instanceof MetricsInterface) {
+                    $this->metrics->increment('subscriptions', (float) count($filters), []);
+                }
+
                 return new SubscribeResult($pid, $subAck->returnCodes, $subAck);
             }
         }
@@ -571,6 +624,10 @@ final class Client implements ClientInterface
 
                 // Remove from stored subscriptions
                 $this->removeSubscriptions($filters);
+
+                if ($this->metrics instanceof MetricsInterface) {
+                    $this->metrics->increment('unsubscriptions', (float) count($filters), []);
+                }
 
                 return;
             }
@@ -938,6 +995,9 @@ final class Client implements ClientInterface
 
         try {
             $this->logger->info('Attempting reconnect', ['attempt' => $this->reconnectAttempts + 1]);
+            if ($this->metrics instanceof MetricsInterface) {
+                $this->metrics->increment('reconnect_attempts', 1.0, []);
+            }
             $this->connect();
             $this->reconnectAttempts = 0;
             // Resubscribe
@@ -1119,4 +1179,32 @@ final class Client implements ClientInterface
         }
     }
 
+    /**
+     * Drain the offline message queue, publishing all buffered messages.
+     */
+    private function drainOfflineQueue(): void
+    {
+        if (! $this->offlineQueue instanceof OfflineQueue || $this->offlineQueue->isEmpty()) {
+            return;
+        }
+
+        $drained = 0;
+        while (($msg = $this->offlineQueue->dequeue()) !== null) {
+            try {
+                $this->publish($msg['topic'], $msg['payload'], $msg['options']);
+                $drained++;
+            } catch (Throwable $e) {
+                $this->logger->warning('Failed to drain offline message', ['topic' => $msg['topic'], 'error' => $e->getMessage()]);
+
+                break;
+            }
+        }
+
+        if ($drained > 0) {
+            $this->logger->info('Drained offline queue', ['count' => $drained]);
+            if ($this->metrics instanceof MetricsInterface) {
+                $this->metrics->increment('offline_queue_drained', (float) $drained, []);
+            }
+        }
+    }
 }
