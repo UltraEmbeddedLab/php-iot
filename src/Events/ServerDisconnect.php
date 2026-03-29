@@ -38,7 +38,7 @@ use ScienceStories\Mqtt\Protocol\Packet\Disconnect;
  * });
  * ```
  */
-final class ServerDisconnect
+final readonly class ServerDisconnect
 {
     /**
      * @param Disconnect $disconnect The decoded DISCONNECT packet

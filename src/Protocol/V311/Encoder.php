@@ -46,9 +46,9 @@ final class Encoder implements EncoderInterface
             $flags |= 0x40;
         }
         // Will settings (v3 payload Will Topic + Message precede username/password)
-        $hasWill = $pkt->will !== null;
+        $hasWill = $pkt->will instanceof \ScienceStories\Mqtt\Client\WillOptions;
         $will    = $pkt->will;
-        if ($hasWill && $will !== null) {
+        if ($hasWill && $will instanceof \ScienceStories\Mqtt\Client\WillOptions) {
             $flags |= 0x04; // Will Flag
             $q = $will->qos->value & 0x03;
             $flags |= ($q << 3); // Will QoS bits 3-4
@@ -63,7 +63,7 @@ final class Encoder implements EncoderInterface
 
         // Payload
         $payload = Bytes::encodeString($pkt->clientId);
-        if ($hasWill && $will !== null) {
+        if ($hasWill && $will instanceof \ScienceStories\Mqtt\Client\WillOptions) {
             $payload .= Bytes::encodeString($will->topic);
             $payload .= Bytes::encodeString($will->payload);
         }

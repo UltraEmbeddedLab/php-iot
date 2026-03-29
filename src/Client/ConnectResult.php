@@ -12,7 +12,7 @@ use ScienceStories\Mqtt\Protocol\Packet\ConnAck;
  * Contains both high-level connection information and the raw CONNACK packet
  * for detailed inspection of broker capabilities and settings.
  */
-final class ConnectResult
+final readonly class ConnectResult
 {
     public function __construct(
         public bool $sessionPresent,

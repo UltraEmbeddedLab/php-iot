@@ -57,7 +57,7 @@ use const LOCK_EX;
  * - Files contain subscription info (topic filters) only
  * - No message payloads are stored
  */
-final class FileSessionStore implements SessionStoreInterface
+final readonly class FileSessionStore implements SessionStoreInterface
 {
     private string $directory;
 
@@ -142,7 +142,7 @@ final class FileSessionStore implements SessionStoreInterface
         if ($this->defaultExpirySeconds > 0) {
             $state = $this->load($clientId);
 
-            return $state !== null;
+            return $state instanceof \ScienceStories\Mqtt\Session\SessionState;
         }
 
         return true;

@@ -18,7 +18,7 @@ use ScienceStories\Mqtt\Protocol\Packet\SubAck;
  *   * For v5: reason codes (0x00..0x9F); 0x00..0x02 still map to granted QoS
  * - subAck: Full SUBACK packet for detailed inspection (return codes, properties, descriptions)
  */
-final class SubscribeResult
+final readonly class SubscribeResult
 {
     /**
      * @param  int  $packetId  Packet identifier matching the SUBSCRIBE request

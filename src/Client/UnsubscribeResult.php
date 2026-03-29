@@ -18,7 +18,7 @@ use ScienceStories\Mqtt\Protocol\Packet\UnsubAck;
  *   * For v5: reason codes per topic filter (0x00=Success, 0x11=No subscription existed, 0x80+=errors)
  * - unsubAck: Full UNSUBACK packet for detailed inspection (reason codes, properties, descriptions)
  */
-final class UnsubscribeResult
+final readonly class UnsubscribeResult
 {
     /**
      * @param  int  $packetId  Packet identifier matching the UNSUBSCRIBE request

@@ -10,7 +10,7 @@ use ScienceStories\Mqtt\Protocol\QoS;
  * Data Transfer Object for inbound MQTT PUBLISH messages.
  * Carries message metadata and payload without any behavior.
  */
-final class InboundMessage
+final readonly class InboundMessage
 {
     /**
      * @param  array<string,mixed>|null  $properties  MQTT v5 properties if available

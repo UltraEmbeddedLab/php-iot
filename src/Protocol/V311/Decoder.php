@@ -63,7 +63,7 @@ final class Decoder implements DecoderInterface
         if ($packetId === false || ! isset($packetId[1]) || ! \is_int($packetId[1])) {
             throw new ProtocolError('SUBACK malformed packet id');
         }
-        $pid   = (int) $packetId[1];
+        $pid   = $packetId[1];
         $codes = [];
         $rest  = substr($packetBody, 2);
         $len   = \strlen($rest);
@@ -95,7 +95,7 @@ final class Decoder implements DecoderInterface
             if ($arr === false || ! isset($arr[1]) || ! \is_int($arr[1])) {
                 throw new ProtocolError('PUBLISH invalid packet id');
             }
-            $packetId = (int) $arr[1];
+            $packetId = $arr[1];
             $offset += 2;
         }
 
@@ -108,7 +108,6 @@ final class Decoder implements DecoderInterface
             retain: $retain,
             dup: $dup,
             packetId: $packetId,
-            properties: null,
         );
     }
 
@@ -130,7 +129,7 @@ final class Decoder implements DecoderInterface
             throw new ProtocolError('UNSUBACK malformed packet id');
         }
 
-        $pid = (int) $arr[1];
+        $pid = $arr[1];
 
         return new UnsubAck($pid);
     }
@@ -153,9 +152,9 @@ final class Decoder implements DecoderInterface
             throw new ProtocolError('PUBACK malformed packet id');
         }
 
-        $pid = (int) $arr[1];
+        $pid = $arr[1];
 
-        return new PubAck($pid, 0, null);
+        return new PubAck($pid, 0);
     }
 
     /**
@@ -176,9 +175,9 @@ final class Decoder implements DecoderInterface
             throw new ProtocolError('PUBREC malformed packet id');
         }
 
-        $pid = (int) $arr[1];
+        $pid = $arr[1];
 
-        return new PubRec($pid, 0, null);
+        return new PubRec($pid, 0);
     }
 
     /**
@@ -199,9 +198,9 @@ final class Decoder implements DecoderInterface
             throw new ProtocolError('PUBREL malformed packet id');
         }
 
-        $pid = (int) $arr[1];
+        $pid = $arr[1];
 
-        return new PubRel($pid, 0, null);
+        return new PubRel($pid, 0);
     }
 
     /**
@@ -222,9 +221,9 @@ final class Decoder implements DecoderInterface
             throw new ProtocolError('PUBCOMP malformed packet id');
         }
 
-        $pid = (int) $arr[1];
+        $pid = $arr[1];
 
-        return new PubComp($pid, 0, null);
+        return new PubComp($pid, 0);
     }
 
     /**
@@ -239,6 +238,6 @@ final class Decoder implements DecoderInterface
     public function decodeDisconnect(string $packetBody): Disconnect
     {
         // MQTT 3.1.1 DISCONNECT has no body - always normal disconnection
-        return new Disconnect(0x00, null);
+        return new Disconnect(0x00);
     }
 }

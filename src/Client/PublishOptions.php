@@ -6,7 +6,7 @@ namespace ScienceStories\Mqtt\Client;
 
 use ScienceStories\Mqtt\Protocol\QoS;
 
-final class PublishOptions
+final readonly class PublishOptions
 {
     /**
      * @param  array<string, mixed>|null  $properties

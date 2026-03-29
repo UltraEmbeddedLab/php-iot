@@ -45,9 +45,9 @@ final class Encoder implements EncoderInterface
             $flags |= 0x40;
         }
         // Will support (v5): set Will Flag, QoS, Retain in flags; will properties in payload
-        $hasWill = $pkt->will !== null;
+        $hasWill = $pkt->will instanceof \ScienceStories\Mqtt\Client\WillOptions;
         $will    = $pkt->will;
-        if ($hasWill && $will !== null) {
+        if ($hasWill && $will instanceof \ScienceStories\Mqtt\Client\WillOptions) {
             $flags |= 0x04; // Will Flag
             $q = $will->qos->value & 0x03;
             $flags |= ($q << 3);
@@ -66,7 +66,7 @@ final class Encoder implements EncoderInterface
             // Session Expiry Interval (0x11) - four byte integer
             if (\array_key_exists('session_expiry_interval', $pkt->properties)) {
                 $val = $pkt->properties['session_expiry_interval'];
-                $u32 = \is_int($val) ? $val : (int) (\is_string($val) && is_numeric($val) ? (int) $val : 0);
+                $u32 = \is_int($val) ? $val : (int) (\is_string($val) && is_numeric($val) ? $val : 0);
                 if ($u32 < 0) {
                     $u32 = 0;
                 }
@@ -79,7 +79,7 @@ final class Encoder implements EncoderInterface
             // Receive Maximum (0x21) - two byte integer
             if (\array_key_exists('receive_maximum', $pkt->properties)) {
                 $val = $pkt->properties['receive_maximum'];
-                $u16 = \is_int($val) ? $val : (int) (\is_string($val) && is_numeric($val) ? (int) $val : 65535);
+                $u16 = \is_int($val) ? $val : (int) (\is_string($val) && is_numeric($val) ? $val : 65535);
                 if ($u16 < 1) {
                     $u16 = 1;
                 }
@@ -92,7 +92,7 @@ final class Encoder implements EncoderInterface
             // Topic Alias Maximum (0x22) - two byte integer
             if (\array_key_exists('topic_alias_maximum', $pkt->properties)) {
                 $val = $pkt->properties['topic_alias_maximum'];
-                $u16 = \is_int($val) ? $val : (int) (\is_string($val) && is_numeric($val) ? (int) $val : 0);
+                $u16 = \is_int($val) ? $val : (int) (\is_string($val) && is_numeric($val) ? $val : 0);
                 if ($u16 < 0) {
                     $u16 = 0;
                 }
@@ -106,7 +106,7 @@ final class Encoder implements EncoderInterface
 
         // Payload
         $payload = Bytes::encodeString($pkt->clientId);
-        if ($hasWill && $will !== null) {
+        if ($hasWill && $will instanceof \ScienceStories\Mqtt\Client\WillOptions) {
             // Will Properties (varint length). MVP: none
             $payload .= Bytes::encodeVarInt(0);
             // Will Topic and Will Payload
@@ -208,7 +208,7 @@ final class Encoder implements EncoderInterface
         // Properties for SUBSCRIBE (v5). Support: user_properties (0x26)
         // Other properties like subscription_identifier (0x0B) can be added later
         $props = '';
-        if ($options !== null && \is_array($options->properties) && \array_key_exists('user_properties', $options->properties)) {
+        if ($options instanceof \ScienceStories\Mqtt\Client\SubscribeOptions && \is_array($options->properties) && \array_key_exists('user_properties', $options->properties)) {
             $up = $options->properties['user_properties'];
             if (\is_array($up)) {
                 foreach ($this->normalizeUserProperties($up) as [$k, $v]) {
@@ -246,7 +246,7 @@ final class Encoder implements EncoderInterface
             $opts |= ($qos & 0x03);
 
             // Apply MQTT 5.0 subscription options if provided
-            if ($options) {
+            if ($options instanceof \ScienceStories\Mqtt\Client\SubscribeOptions) {
                 // Bit 2: No Local flag (don't receive own publications)
                 if ($options->noLocal) {
                     $opts |= 0x04;
@@ -437,12 +437,13 @@ final class Encoder implements EncoderInterface
 
     private function toUInt16(mixed $v): int
     {
-        $i = \is_int($v) ? $v : (int) (\is_string($v) && is_numeric($v) ? (int) $v : 0);
+        $this->rejectInvalidType($v);
+        $i = \is_int($v) ? $v : (int) (\is_string($v) && is_numeric($v) ? $v : 0);
         if ($i < 0) {
             $i = 0;
         }
         if ($i > 0xFFFF) {
-            $i = 0xFFFF;
+            return 0xFFFF;
         }
 
         return $i;
@@ -450,13 +451,14 @@ final class Encoder implements EncoderInterface
 
     private function toUInt32(mixed $v): int
     {
-        $i = \is_int($v) ? $v : (int) (\is_string($v) && is_numeric($v) ? (int) $v : 0);
+        $this->rejectInvalidType($v);
+        $i = \is_int($v) ? $v : (int) (\is_string($v) && is_numeric($v) ? $v : 0);
         if ($i < 0) {
             $i = 0;
         }
         // pack('N', $i) will take lower 32 bits; clamp to 32-bit range
         if ($i > 0xFFFFFFFF) {
-            $i = 0xFFFFFFFF;
+            return 0xFFFFFFFF;
         }
 
         return $i;
@@ -464,17 +466,28 @@ final class Encoder implements EncoderInterface
 
     private function toByte(mixed $v): int
     {
+        $this->rejectInvalidType($v);
         if (\is_bool($v)) {
             return $v ? 1 : 0;
         }
-        $i = \is_int($v) ? $v : (int) (\is_string($v) && is_numeric($v) ? (int) $v : 0);
+        $i = \is_int($v) ? $v : (int) (\is_string($v) && is_numeric($v) ? $v : 0);
         if ($i < 0) {
             $i = 0;
         }
         if ($i > 255) {
-            $i = 255;
+            return 255;
         }
 
         return $i;
+    }
+
+    private function rejectInvalidType(mixed $v): void
+    {
+        if (\is_array($v) || \is_resource($v) || (\is_object($v) && ! method_exists($v, '__toString'))) {
+            throw new \InvalidArgumentException(\sprintf(
+                'MQTT property value must be a scalar type, got %s',
+                get_debug_type($v),
+            ));
+        }
     }
 }

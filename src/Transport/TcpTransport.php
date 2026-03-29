@@ -11,10 +11,10 @@ use ScienceStories\Mqtt\Exception\TransportError;
 final class TcpTransport implements TransportInterface
 {
     /** @var resource|null */
-    private $stream = null;
+    private $stream;
 
     /** @var resource|null */
-    private $context = null;
+    private $context;
 
     private bool $tlsEnabled = false;
 
@@ -212,7 +212,12 @@ final class TcpTransport implements TransportInterface
             if (! \array_key_exists('SNI_enabled', $ssl)) {
                 @stream_context_set_option($this->context, 'ssl', 'SNI_enabled', true);
             }
-            // peer_name can be left unset to allow SNI to infer the host
+            if (! \array_key_exists('verify_peer', $ssl)) {
+                @stream_context_set_option($this->context, 'ssl', 'verify_peer', true);
+            }
+            if (! \array_key_exists('verify_peer_name', $ssl)) {
+                @stream_context_set_option($this->context, 'ssl', 'verify_peer_name', true);
+            }
         }
 
         // Initiate TLS handshake

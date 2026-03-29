@@ -89,13 +89,7 @@ final class SubAck
      */
     public function isSuccess(): bool
     {
-        foreach ($this->returnCodes as $code) {
-            if ($code >= 0x80) {
-                return false;
-            }
-        }
-
-        return true;
+        return array_all($this->returnCodes, fn ($code): bool => $code < 0x80);
     }
 
     /**
@@ -218,8 +212,6 @@ final class SubAck
         }
 
         // Ensure all keys and values are strings for type safety
-        return array_filter($val, function ($value, $key) {
-            return \is_string($key) && \is_string($value);
-        }, ARRAY_FILTER_USE_BOTH);
+        return array_filter($val, fn ($value, $key) => \is_string($key) && \is_string($value), ARRAY_FILTER_USE_BOTH);
     }
 }

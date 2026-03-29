@@ -196,14 +196,12 @@ final class Decoder implements DecoderInterface
     }
 
     /**
-     * Parse MQTT 5.0 SUBACK properties.
-     * Recognized keys:
-     *  - reason_string (0x1F): string
-     *  - user_properties (0x26): array<string,string>
+     * Parse common MQTT 5.0 acknowledgment properties (reason_string + user_properties).
+     * Used by SUBACK, UNSUBACK, PUBACK, PUBREC, PUBREL, PUBCOMP.
      *
      * @return array<string, mixed>
      */
-    private function parseSubAckProperties(string $props): array
+    private function parseAckProperties(string $props): array
     {
         $out = [];
         $i   = 0;
@@ -254,7 +252,7 @@ final class Decoder implements DecoderInterface
         if ($arr === false || ! isset($arr[1]) || ! \is_int($arr[1])) {
             throw new ProtocolError('SUBACK malformed packet id');
         }
-        $pid    = (int) $arr[1];
+        $pid    = $arr[1];
         $offset = 2;
         // Properties
         $rest     = substr($packetBody, $offset);
@@ -266,7 +264,7 @@ final class Decoder implements DecoderInterface
         }
         $propsRaw = substr($packetBody, $offset, $propLen);
         $offset += $propLen;
-        $propsMap = $propLen > 0 ? $this->parseSubAckProperties($propsRaw) : null;
+        $propsMap = $propLen > 0 ? $this->parseAckProperties($propsRaw) : null;
 
         // Reason codes
         $codes = [];
@@ -298,7 +296,7 @@ final class Decoder implements DecoderInterface
             if ($arr === false || ! isset($arr[1]) || ! \is_int($arr[1])) {
                 throw new ProtocolError('PUBLISH invalid packet id');
             }
-            $packetId = (int) $arr[1];
+            $packetId = $arr[1];
             $offset += 2;
         }
 
@@ -349,7 +347,7 @@ final class Decoder implements DecoderInterface
         if ($arr === false || ! isset($arr[1]) || ! \is_int($arr[1])) {
             throw new ProtocolError('UNSUBACK malformed packet id');
         }
-        $pid    = (int) $arr[1];
+        $pid    = $arr[1];
         $offset = 2;
 
         // Properties
@@ -362,7 +360,7 @@ final class Decoder implements DecoderInterface
         }
         $propsRaw = substr($packetBody, $offset, $propLen);
         $offset += $propLen;
-        $propsMap = $propLen > 0 ? $this->parseUnsubAckProperties($propsRaw) : null;
+        $propsMap = $propLen > 0 ? $this->parseAckProperties($propsRaw) : null;
 
         // Reason codes
         $codes = [];
@@ -373,43 +371,6 @@ final class Decoder implements DecoderInterface
         return new UnsubAck($pid, $codes, $propsMap);
     }
 
-    /**
-     * Parse MQTT 5.0 UNSUBACK properties.
-     * Recognized keys:
-     *  - reason_string (0x1F): string
-     *  - user_properties (0x26): array<string,string>
-     *
-     * @return array<string, mixed>
-     */
-    private function parseUnsubAckProperties(string $props): array
-    {
-        $out = [];
-        $i   = 0;
-        $n   = \strlen($props);
-        while ($i < $n) {
-            $id = \ord($props[$i++]);
-            switch ($id) {
-                case 0x1F: // Reason String (string)
-                    $off                  = $i;
-                    $out['reason_string'] = Bytes::decodeString($props, $off);
-                    $i                    = $off;
-                    break;
-                case 0x26: // User Property (key,value)
-                    $off                        = $i;
-                    $k                          = Bytes::decodeString($props, $off);
-                    $v                          = Bytes::decodeString($props, $off);
-                    $i                          = $off;
-                    $out['user_properties'][$k] = $v;
-                    break;
-                default:
-                    // Unknown property: stop parsing for safety
-                    $i = $n;
-                    break;
-            }
-        }
-
-        return $out;
-    }
 
     /**
      * Parse a subset of v5 PUBLISH properties into an associative array.
@@ -476,208 +437,60 @@ final class Decoder implements DecoderInterface
         return $out;
     }
 
-    /**
-     * Parse MQTT 5.0 QoS acknowledgment packet properties (PUBACK, PUBREC, PUBREL, PUBCOMP).
-     * Recognized keys:
-     *  - reason_string (0x1F): string
-     *  - user_properties (0x26): array<string,string>
-     *
-     * @return array<string, mixed>
-     */
-    private function parseQoSAckProperties(string $props): array
-    {
-        $out = [];
-        $i   = 0;
-        $n   = \strlen($props);
-        while ($i < $n) {
-            $id = \ord($props[$i++]);
-            switch ($id) {
-                case 0x1F: // Reason String (string)
-                    $off                  = $i;
-                    $out['reason_string'] = Bytes::decodeString($props, $off);
-                    $i                    = $off;
-                    break;
-                case 0x26: // User Property (key,value)
-                    $off                        = $i;
-                    $k                          = Bytes::decodeString($props, $off);
-                    $v                          = Bytes::decodeString($props, $off);
-                    $i                          = $off;
-                    $out['user_properties'][$k] = $v;
-                    break;
-                default:
-                    // Unknown property: stop parsing for safety
-                    $i = $n;
-                    break;
-            }
-        }
 
-        return $out;
-    }
-
-    /**
-     * Decode PUBACK body for MQTT 5.0.
-     *
-     * Structure:
-     * - Packet Identifier (2 bytes)
-     * - Reason Code (1 byte) - optional, defaults to 0x00 if omitted
-     * - Properties (varint length + data) - optional
-     */
     public function decodePubAck(string $packetBody): PubAck
     {
-        if (\strlen($packetBody) < 2) {
-            throw new ProtocolError('PUBACK too short');
-        }
-        $arr = unpack('n', substr($packetBody, 0, 2));
-        if ($arr === false || ! isset($arr[1]) || ! \is_int($arr[1])) {
-            throw new ProtocolError('PUBACK malformed packet id');
-        }
-        $pid = (int) $arr[1];
-
-        // If packet is only 2 bytes, reason code and properties are omitted (success)
-        if (\strlen($packetBody) === 2) {
-            return new PubAck($pid, 0, null);
-        }
-
-        // Reason code (1 byte)
-        $reasonCode = \ord($packetBody[2]);
-        $offset     = 3;
-
-        // Properties
-        $propsMap = null;
-        if ($offset < \strlen($packetBody)) {
-            $rest     = substr($packetBody, $offset);
-            $consumed = 0;
-            $propLen  = Bytes::decodeVarInt($rest, $consumed);
-            $offset += $consumed;
-            if ($offset + $propLen > \strlen($packetBody)) {
-                throw new ProtocolError('PUBACK properties truncated');
-            }
-            $propsRaw = substr($packetBody, $offset, $propLen);
-            $propsMap = $propLen > 0 ? $this->parseQoSAckProperties($propsRaw) : null;
-        }
+        [$pid, $reasonCode, $propsMap] = $this->decodeQoSAck($packetBody, 'PUBACK');
 
         return new PubAck($pid, $reasonCode, $propsMap);
     }
 
-    /**
-     * Decode PUBREC body for MQTT 5.0.
-     *
-     * Structure:
-     * - Packet Identifier (2 bytes)
-     * - Reason Code (1 byte) - optional, defaults to 0x00 if omitted
-     * - Properties (varint length + data) - optional
-     */
     public function decodePubRec(string $packetBody): PubRec
     {
-        if (\strlen($packetBody) < 2) {
-            throw new ProtocolError('PUBREC too short');
-        }
-        $arr = unpack('n', substr($packetBody, 0, 2));
-        if ($arr === false || ! isset($arr[1]) || ! \is_int($arr[1])) {
-            throw new ProtocolError('PUBREC malformed packet id');
-        }
-        $pid = (int) $arr[1];
-
-        // If packet is only 2 bytes, reason code and properties are omitted (success)
-        if (\strlen($packetBody) === 2) {
-            return new PubRec($pid, 0, null);
-        }
-
-        // Reason code (1 byte)
-        $reasonCode = \ord($packetBody[2]);
-        $offset     = 3;
-
-        // Properties
-        $propsMap = null;
-        if ($offset < \strlen($packetBody)) {
-            $rest     = substr($packetBody, $offset);
-            $consumed = 0;
-            $propLen  = Bytes::decodeVarInt($rest, $consumed);
-            $offset += $consumed;
-            if ($offset + $propLen > \strlen($packetBody)) {
-                throw new ProtocolError('PUBREC properties truncated');
-            }
-            $propsRaw = substr($packetBody, $offset, $propLen);
-            $propsMap = $propLen > 0 ? $this->parseQoSAckProperties($propsRaw) : null;
-        }
+        [$pid, $reasonCode, $propsMap] = $this->decodeQoSAck($packetBody, 'PUBREC');
 
         return new PubRec($pid, $reasonCode, $propsMap);
     }
 
-    /**
-     * Decode PUBREL body for MQTT 5.0.
-     *
-     * Structure:
-     * - Packet Identifier (2 bytes)
-     * - Reason Code (1 byte) - optional, defaults to 0x00 if omitted
-     * - Properties (varint length + data) - optional
-     */
     public function decodePubRel(string $packetBody): PubRel
     {
-        if (\strlen($packetBody) < 2) {
-            throw new ProtocolError('PUBREL too short');
-        }
-        $arr = unpack('n', substr($packetBody, 0, 2));
-        if ($arr === false || ! isset($arr[1]) || ! \is_int($arr[1])) {
-            throw new ProtocolError('PUBREL malformed packet id');
-        }
-        $pid = (int) $arr[1];
-
-        // If packet is only 2 bytes, reason code and properties are omitted (success)
-        if (\strlen($packetBody) === 2) {
-            return new PubRel($pid, 0, null);
-        }
-
-        // Reason code (1 byte)
-        $reasonCode = \ord($packetBody[2]);
-        $offset     = 3;
-
-        // Properties
-        $propsMap = null;
-        if ($offset < \strlen($packetBody)) {
-            $rest     = substr($packetBody, $offset);
-            $consumed = 0;
-            $propLen  = Bytes::decodeVarInt($rest, $consumed);
-            $offset += $consumed;
-            if ($offset + $propLen > \strlen($packetBody)) {
-                throw new ProtocolError('PUBREL properties truncated');
-            }
-            $propsRaw = substr($packetBody, $offset, $propLen);
-            $propsMap = $propLen > 0 ? $this->parseQoSAckProperties($propsRaw) : null;
-        }
+        [$pid, $reasonCode, $propsMap] = $this->decodeQoSAck($packetBody, 'PUBREL');
 
         return new PubRel($pid, $reasonCode, $propsMap);
     }
 
-    /**
-     * Decode PUBCOMP body for MQTT 5.0.
-     *
-     * Structure:
-     * - Packet Identifier (2 bytes)
-     * - Reason Code (1 byte) - optional, defaults to 0x00 if omitted
-     * - Properties (varint length + data) - optional
-     */
     public function decodePubComp(string $packetBody): PubComp
     {
+        [$pid, $reasonCode, $propsMap] = $this->decodeQoSAck($packetBody, 'PUBCOMP');
+
+        return new PubComp($pid, $reasonCode, $propsMap);
+    }
+
+    /**
+     * Shared decoder for QoS acknowledgment packets (PUBACK, PUBREC, PUBREL, PUBCOMP).
+     *
+     * Structure: Packet Identifier (2 bytes) + optional Reason Code (1 byte) + optional Properties.
+     *
+     * @return array{0: int, 1: int, 2: array<string, mixed>|null} [packetId, reasonCode, properties]
+     */
+    private function decodeQoSAck(string $packetBody, string $packetName): array
+    {
         if (\strlen($packetBody) < 2) {
-            throw new ProtocolError('PUBCOMP too short');
+            throw new ProtocolError("{$packetName} too short");
         }
         $arr = unpack('n', substr($packetBody, 0, 2));
         if ($arr === false || ! isset($arr[1]) || ! \is_int($arr[1])) {
-            throw new ProtocolError('PUBCOMP malformed packet id');
+            throw new ProtocolError("{$packetName} malformed packet id");
         }
-        $pid = (int) $arr[1];
+        $pid = $arr[1];
 
-        // If packet is only 2 bytes, reason code and properties are omitted (success)
         if (\strlen($packetBody) === 2) {
-            return new PubComp($pid, 0, null);
+            return [$pid, 0, null];
         }
 
-        // Reason code (1 byte)
         $reasonCode = \ord($packetBody[2]);
         $offset     = 3;
 
-        // Properties
         $propsMap = null;
         if ($offset < \strlen($packetBody)) {
             $rest     = substr($packetBody, $offset);
@@ -685,13 +498,13 @@ final class Decoder implements DecoderInterface
             $propLen  = Bytes::decodeVarInt($rest, $consumed);
             $offset += $consumed;
             if ($offset + $propLen > \strlen($packetBody)) {
-                throw new ProtocolError('PUBCOMP properties truncated');
+                throw new ProtocolError("{$packetName} properties truncated");
             }
             $propsRaw = substr($packetBody, $offset, $propLen);
-            $propsMap = $propLen > 0 ? $this->parseQoSAckProperties($propsRaw) : null;
+            $propsMap = $propLen > 0 ? $this->parseAckProperties($propsRaw) : null;
         }
 
-        return new PubComp($pid, $reasonCode, $propsMap);
+        return [$pid, $reasonCode, $propsMap];
     }
 
     /**
@@ -707,8 +520,8 @@ final class Decoder implements DecoderInterface
     public function decodeDisconnect(string $packetBody): Disconnect
     {
         // Empty packet = normal disconnection (reason code 0x00)
-        if (\strlen($packetBody) === 0) {
-            return new Disconnect(0x00, null);
+        if ($packetBody === '') {
+            return new Disconnect(0x00);
         }
 
         // Reason code (1 byte)

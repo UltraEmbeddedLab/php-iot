@@ -114,6 +114,23 @@ final class TopicAliasManager
         if ($alias < 1 || $topic === '') {
             return;
         }
+
+        // Clean up old topic mapping if alias was previously mapped to a different topic
+        if (isset($this->aliasToTopic[$alias])) {
+            $oldTopic = $this->aliasToTopic[$alias];
+            if ($oldTopic !== $topic) {
+                unset($this->topicToAlias[$oldTopic]);
+            }
+        }
+
+        // Clean up old alias mapping if topic was previously mapped to a different alias
+        if (isset($this->topicToAlias[$topic])) {
+            $oldAlias = $this->topicToAlias[$topic];
+            if ($oldAlias !== $alias) {
+                unset($this->aliasToTopic[$oldAlias]);
+            }
+        }
+
         $this->aliasToTopic[$alias] = $topic;
         $this->topicToAlias[$topic] = $alias;
     }

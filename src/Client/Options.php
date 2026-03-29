@@ -154,7 +154,7 @@ final class Options
         $f = trim($filter);
         $c = clone $this;
         if ($f !== '') {
-            $c->messageFilters   = $c->messageFilters ?? [];
+            $c->messageFilters ??= [];
             $c->messageFilters[] = $f;
         }
 

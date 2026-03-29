@@ -231,9 +231,7 @@ final class Disconnect
         }
 
         // Ensure all keys and values are strings for type safety
-        return array_filter($val, function ($value, $key) {
-            return \is_string($key) && \is_string($value);
-        }, ARRAY_FILTER_USE_BOTH);
+        return array_filter($val, fn ($value, $key) => \is_string($key) && \is_string($value), ARRAY_FILTER_USE_BOTH);
     }
 
     /**

@@ -77,16 +77,7 @@ final class UnsubAck
         if ($this->reasonCodes === null) {
             return true;
         }
-
-        // MQTT 5.0: check all reason codes
-        foreach ($this->reasonCodes as $code) {
-            // 0x00 = Success, 0x11 = No subscription existed (both acceptable)
-            if ($code !== 0x00 && $code !== 0x11) {
-                return false;
-            }
-        }
-
-        return true;
+        return array_all($this->reasonCodes, fn ($code): bool => !($code !== 0x00 && $code !== 0x11));
     }
 
     /**
@@ -99,14 +90,7 @@ final class UnsubAck
         if ($this->reasonCodes === null) {
             return false;
         }
-
-        foreach ($this->reasonCodes as $code) {
-            if ($code >= 0x80) {
-                return true;
-            }
-        }
-
-        return false;
+        return array_any($this->reasonCodes, fn ($code): bool => $code >= 0x80);
     }
 
     /**
@@ -216,8 +200,6 @@ final class UnsubAck
         }
 
         // Ensure all keys and values are strings for type safety
-        return array_filter($val, function ($value, $key) {
-            return \is_string($key) && \is_string($value);
-        }, ARRAY_FILTER_USE_BOTH);
+        return array_filter($val, fn ($value, $key) => \is_string($key) && \is_string($value), ARRAY_FILTER_USE_BOTH);
     }
 }

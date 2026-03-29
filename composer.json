@@ -49,12 +49,18 @@
   "prefer-stable": true,
   "scripts": {
     "test": "pest",
+    "test:unit": "pest --testsuite=Unit",
+    "test:integration": "pest --testsuite=Integration",
     "test:coverage": "pest --coverage",
     "type-coverage": "pest --type-coverage",
     "stan": "phpstan analyse --memory-limit=1G",
     "pint": "pint",
     "lint": "@pint --test && @stan",
     "rector": "rector process --clear-cache",
+    "rector:check": "rector process --clear-cache --dry-run",
+    "security:audit": "composer audit",
+    "validate:strict": "composer validate --strict",
+    "ci": "@validate:strict && @security:audit && @pint --test && @stan && @rector:check && @test",
     "bench": "php benchmarks/publish-throughput.php"
   },
   "config": {

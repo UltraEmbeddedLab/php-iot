@@ -172,7 +172,7 @@ final class Mqtt
             ]);
         }
 
-        $client = new Client($opts, new TcpTransport(), logger: $logger);
+        $client = new Client($opts, new TcpTransport(), logger: $logger ?? new \Psr\Log\NullLogger());
         $result = $client->connect();
 
         // Broker accepted validate connection

@@ -5,7 +5,7 @@ declare(strict_types=1);
 use ScienceStories\Mqtt\Client\Options;
 use ScienceStories\Mqtt\Protocol\MqttVersion;
 
-test('Options can be created with default values', function () {
+test('Options can be created with default values', function (): void {
     $options = new Options('localhost');
 
     expect($options->clientId)->toBeString()
@@ -16,19 +16,19 @@ test('Options can be created with default values', function () {
         ->and($options->cleanSession)->toBeTrue();
 });
 
-test('Options can be created with custom client ID', function () {
+test('Options can be created with custom client ID', function (): void {
     $options = new Options('localhost', clientId: 'test-client-123');
 
     expect($options->clientId)->toBe('test-client-123');
 });
 
-test('Options can be configured for MQTT 3.1.1', function () {
+test('Options can be configured for MQTT 3.1.1', function (): void {
     $options = new Options('localhost', version: MqttVersion::V3_1_1);
 
     expect($options->version)->toBe(MqttVersion::V3_1_1);
 });
 
-test('Options withHost returns new instance with updated values', function () {
+test('Options withHost returns new instance with updated values', function (): void {
     $original = new Options('localhost');
     $updated  = $original->withHost('broker.example.com', 8883);
 
@@ -39,7 +39,7 @@ test('Options withHost returns new instance with updated values', function () {
         ->and($updated)->not->toBe($original);
 });
 
-test('Options withUser returns new instance with credentials', function () {
+test('Options withUser returns new instance with credentials', function (): void {
     $original = new Options('localhost');
     $updated  = $original->withUser('user123', 'pass456');
 
@@ -50,7 +50,7 @@ test('Options withUser returns new instance with credentials', function () {
         ->and($updated)->not->toBe($original);
 });
 
-test('Options withKeepAlive returns new instance', function () {
+test('Options withKeepAlive returns new instance', function (): void {
     $original = new Options('localhost');
     $updated  = $original->withKeepAlive(120);
 
@@ -59,7 +59,7 @@ test('Options withKeepAlive returns new instance', function () {
         ->and($updated)->not->toBe($original);
 });
 
-test('Options withCleanSession returns new instance', function () {
+test('Options withCleanSession returns new instance', function (): void {
     $original = new Options('localhost', cleanSession: true);
     $updated  = $original->withCleanSession(false);
 

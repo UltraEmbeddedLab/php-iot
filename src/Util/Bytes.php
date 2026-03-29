@@ -100,7 +100,7 @@ final class Bytes
         if ($lenArr === false || ! isset($lenArr[1]) || ! \is_int($lenArr[1])) {
             throw new ProtocolError('Malformed string: invalid length prefix');
         }
-        $len = (int) $lenArr[1];
+        $len = $lenArr[1];
         $offset += 2;
 
         if ($offset + $len > \strlen($data)) {

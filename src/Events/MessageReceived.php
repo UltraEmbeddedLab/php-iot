@@ -10,7 +10,7 @@ use ScienceStories\Mqtt\Client\InboundMessage;
  * PSR-14 event dispatched when an inbound PUBLISH is delivered to the client.
  * DTO-only, immutable.
  */
-final class MessageReceived
+final readonly class MessageReceived
 {
     public function __construct(
         public InboundMessage $message,
