@@ -120,6 +120,35 @@ final class Client implements ClientInterface
     /** Offline message queue for buffering during disconnects */
     private ?OfflineQueue $offlineQueue = null;
 
+    private int $bytesSent = 0;
+
+    private int $bytesReceived = 0;
+
+    public function bytesSent(): int
+    {
+        return $this->bytesSent;
+    }
+
+    public function bytesReceived(): int
+    {
+        return $this->bytesReceived;
+    }
+
+    private function trackWrite(string $bytes): void
+    {
+        $written = $this->transport->write($bytes);
+        $this->bytesSent += $written;
+
+    }
+
+    private function trackRead(int $length, ?float $timeoutSec = null): string
+    {
+        $data = $this->transport->readExact($length, $timeoutSec);
+        $this->bytesReceived += strlen($data);
+
+        return $data;
+    }
+
     private function touchActivity(): void
     {
         $this->lastActivity = microtime(true);
@@ -137,7 +166,7 @@ final class Client implements ClientInterface
         // Build PINGREQ without awaiting response; loopOnce() or ping() will handle PINGRESP
         $pkt = chr(PacketType::PINGREQ->value << 4) . chr(0);
         $this->logger->debug('>> PINGREQ (auto)');
-        $this->transport->write($pkt);
+        $this->trackWrite($pkt);
         $this->pingOutstanding = true;
         $this->touchActivity();
     }
@@ -182,11 +211,20 @@ final class Client implements ClientInterface
         $this->transport->open($this->options->host, $this->options->port);
 
         if ($this->options->useTls) {
-            // Ensure peer_name defaults to host for SNI if not provided
-            $tls = $this->options->tlsOptions ?? [];
-            $ssl = is_array($tls['ssl'] ?? null) ? $tls['ssl'] : $tls;
-            if (! array_key_exists('peer_name', $ssl)) {
-                $tls = ['ssl' => $ssl + ['peer_name' => $this->options->host]];
+            $tlsOpts = $this->options->tlsOptions;
+            if ($tlsOpts instanceof TlsOptions) {
+                // Set peer_name from host if not explicitly configured
+                if ($tlsOpts->peerName === null) {
+                    $tlsOpts = $tlsOpts->withPeerName($this->options->host);
+                }
+                $tls = $tlsOpts->toStreamContext();
+            } else {
+                // Legacy array support
+                $tls = $tlsOpts ?? [];
+                $ssl = is_array($tls['ssl'] ?? null) ? $tls['ssl'] : $tls;
+                if (! array_key_exists('peer_name', $ssl)) {
+                    $tls = ['ssl' => $ssl + ['peer_name' => $this->options->host]];
+                }
             }
             $this->logger->info('Enabling TLS');
             $this->transport->enableTls($tls);
@@ -220,12 +258,12 @@ final class Client implements ClientInterface
         );
         $data = $this->encoder->encodeConnect($connect);
         $this->logger->debug('>> CONNECT', ['bytes' => strlen($data), 'preview' => $this->hexPreview($data)]);
-        $this->transport->write($data);
+        $this->trackWrite($data);
         $this->touchActivity();
 
         // Read the fixed header: 1 byte type, then varint remaining length (1-4 bytes)
         $this->logger->debug('<< waiting for CONNACK');
-        $typeByte = $this->transport->readExact(1, 5.0);
+        $typeByte = $this->trackRead(1, 5.0);
         $this->touchActivity();
         $packetType = ord($typeByte[0]) >> 4;
         if ($packetType !== PacketType::CONNACK->value) {
@@ -235,7 +273,7 @@ final class Client implements ClientInterface
         // Read Remaining Length varint
         $varBytes = '';
         for ($i = 0; $i < 4; $i++) {
-            $b = $this->transport->readExact(1, 5.0);
+            $b = $this->trackRead(1, 5.0);
             $varBytes .= $b;
             $byte = ord($b);
             if (($byte & 0x80) === 0) {
@@ -249,7 +287,7 @@ final class Client implements ClientInterface
             throw new ProtocolError("Invalid CONNACK length: $remainingLen");
         }
 
-        $body = $this->transport->readExact($remainingLen, 5.0);
+        $body = $this->trackRead($remainingLen, 5.0);
         $this->touchActivity();
         $this->logger->debug('<< CONNACK', ['bytes' => $remainingLen, 'preview' => $this->hexPreview($typeByte.$varBytes.$body)]);
         $connack = $this->decoder->decodeConnAck($body);
@@ -320,7 +358,7 @@ final class Client implements ClientInterface
         // DISCONNECT fixed header: type 14, flags 0, length 0
         $packet = chr(PacketType::DISCONNECT->value << 4) . chr(0);
         $this->logger->debug('>> DISCONNECT');
-        $this->transport->write($packet);
+        $this->trackWrite($packet);
 
         $this->transport->close();
         $this->resetConnectionState();
@@ -440,7 +478,7 @@ final class Client implements ClientInterface
         ]);
         // PSR-14: emit PacketSent event for PUBLISH
         $this->dispatch(new EvPacketSent($data, PacketType::PUBLISH->value));
-        $this->transport->write($data);
+        $this->trackWrite($data);
 
         // Track in-flight for flow control
         // @phpstan-ignore-next-line notIdentical.alwaysTrue - packetId is set when qos > 0
@@ -458,12 +496,34 @@ final class Client implements ClientInterface
             case 0:
                 return 0;
             case 1:
-                $pid      = (int) $packetId;
-                $deadline = microtime(true) + 5.0;
+                $pid         = (int) $packetId;
+                $ackTimeout  = $this->options->ackTimeout;
+                $maxResends  = $this->options->maxResendAttempts;
+                $resendCount = 0;
+                $deadline    = microtime(true) + $ackTimeout;
                 while (true) {
                     $timeLeft = $deadline - microtime(true);
                     if ($timeLeft <= 0) {
-                        throw new Timeout('Timed out waiting for PUBACK');
+                        if ($resendCount >= $maxResends) {
+                            throw new Timeout("Timed out waiting for PUBACK after $resendCount resend(s)");
+                        }
+                        // Resend with DUP flag
+                        $resendPkt = new Publish(
+                            $publishTopic,
+                            $payload,
+                            $options->qos,
+                            $options->retain,
+                            dup: true,
+                            packetId: $packetId,
+                            properties: $publishProps,
+                        );
+                        $resendData = $this->encoder->encodePublish($resendPkt);
+                        $this->logger->debug('>> PUBLISH (resend)', ['packetId' => $pid, 'attempt' => $resendCount + 1]);
+                        $this->trackWrite($resendData);
+                        $resendCount++;
+                        $deadline = microtime(true) + $ackTimeout;
+
+                        continue;
                     }
                     $ok = $this->loopOnce(max(0.01, $timeLeft));
                     if (! $ok) {
@@ -480,12 +540,34 @@ final class Client implements ClientInterface
                 // no break
             case 2:
                 $pid               = (int) $packetId;
-                $deadline          = microtime(true) + 5.0;
+                $ackTimeout2       = $this->options->ackTimeout;
+                $maxResends2       = $this->options->maxResendAttempts;
+                $resendCount2      = 0;
+                $deadline          = microtime(true) + $ackTimeout2;
                 $this->lastPubComp = null;
                 while (true) {
                     $timeLeft = $deadline - microtime(true);
                     if ($timeLeft <= 0) {
-                        throw new Timeout('Timed out waiting for QoS2 handshake');
+                        if ($resendCount2 >= $maxResends2) {
+                            throw new Timeout("Timed out waiting for QoS2 handshake after $resendCount2 resend(s)");
+                        }
+                        // Resend with DUP flag
+                        $resendPkt2 = new Publish(
+                            $publishTopic,
+                            $payload,
+                            $options->qos,
+                            $options->retain,
+                            dup: true,
+                            packetId: $packetId,
+                            properties: $publishProps,
+                        );
+                        $resendData2 = $this->encoder->encodePublish($resendPkt2);
+                        $this->logger->debug('>> PUBLISH (QoS2 resend)', ['packetId' => $pid, 'attempt' => $resendCount2 + 1]);
+                        $this->trackWrite($resendData2);
+                        $resendCount2++;
+                        $deadline = microtime(true) + $ackTimeout2;
+
+                        continue;
                     }
                     $ok = $this->loopOnce(max(0.01, $timeLeft));
                     if (! $ok) {
@@ -513,11 +595,11 @@ final class Client implements ClientInterface
         }
         $pkt = chr(PacketType::PINGREQ->value << 4) . chr(0);
         $this->logger->debug('>> PINGREQ');
-        $this->transport->write($pkt);
+        $this->trackWrite($pkt);
         $this->pingOutstanding = true;
         $this->touchActivity();
 
-        $hdr = $this->transport->readExact(2, $timeoutSec ?? 5.0);
+        $hdr = $this->trackRead(2, $timeoutSec ?? 5.0);
         $this->touchActivity();
         $type = (ord($hdr[0]) >> 4);
         $rl   = ord($hdr[1]);
@@ -549,7 +631,7 @@ final class Client implements ClientInterface
         $pid  = RandomId::packetId();
         $data = $this->encoder->encodeSubscribe($filters, $pid, $options);
         $this->logger->debug('>> SUBSCRIBE', ['packetId' => $pid, 'filters' => $filters, 'bytes' => strlen($data), 'preview' => $this->hexPreview($data)]);
-        $this->transport->write($data);
+        $this->trackWrite($data);
         $this->touchActivity();
 
         // Await SUBACK; handle interleaved PUBLISH if broker sends retained messages immediately.
@@ -600,7 +682,7 @@ final class Client implements ClientInterface
         }
         $data = $this->encoder->encodeUnsubscribe($filters, $pid);
         $this->logger->debug('>> UNSUBSCRIBE', ['packetId' => $pid, 'filters' => $filters, 'bytes' => strlen($data), 'preview' => $this->hexPreview($data)]);
-        $this->transport->write($data);
+        $this->trackWrite($data);
         $this->touchActivity();
 
         $deadline = microtime(true) + 5.0;
@@ -645,7 +727,7 @@ final class Client implements ClientInterface
         // Before attempting to read, send an automatic PING if needed.
         $this->maybeAutoPing();
         try {
-            $b0 = $this->transport->readExact(1, $timeoutSec);
+            $b0 = $this->trackRead(1, $timeoutSec);
         } catch (Timeout) {
             return false; // nothing available
         } catch (TransportError) {
@@ -661,7 +743,7 @@ final class Client implements ClientInterface
         // Remaining Length varint
         $varBytes = '';
         for ($i = 0; $i < 4; $i++) {
-            $b = $this->transport->readExact(1, $timeoutSec);
+            $b = $this->trackRead(1, $timeoutSec);
             $varBytes .= $b;
             $byte = ord($b);
             if (($byte & 0x80) === 0) {
@@ -670,7 +752,7 @@ final class Client implements ClientInterface
         }
         $consumed = 0;
         $rl       = Bytes::decodeVarInt($varBytes, $consumed);
-        $body     = $this->transport->readExact($rl, $timeoutSec);
+        $body     = $this->trackRead($rl, $timeoutSec);
         $this->touchActivity();
         // PSR-14: emit PacketReceived with full frame bytes
         $raw = $b0.$varBytes.$body;
@@ -687,7 +769,7 @@ final class Client implements ClientInterface
                 if ($msg->qos->value === 1 && $msg->packetId !== null) {
                     $puback = chr(PacketType::PUBACK->value << 4) . chr(2) . pack('n', $msg->packetId);
                     $this->logger->debug('>> PUBACK', ['packetId' => $msg->packetId]);
-                    $this->transport->write($puback);
+                    $this->trackWrite($puback);
                     $this->touchActivity();
                     // QoS1 idempotency: suppress duplicate deliveries for same Packet Identifier
                     $pid = $msg->packetId;
@@ -713,7 +795,7 @@ final class Client implements ClientInterface
                     $pid    = $msg->packetId;
                     $pubrec = chr(PacketType::PUBREC->value << 4) . chr(2) . pack('n', $pid);
                     $this->logger->debug('>> PUBREC', ['packetId' => $pid]);
-                    $this->transport->write($pubrec);
+                    $this->trackWrite($pubrec);
                     $this->touchActivity();
                     // Store message only if not already pending
                     if (! isset($this->qos2InboundPending[$pid])) {
@@ -773,7 +855,7 @@ final class Client implements ClientInterface
                 // Send PUBCOMP response
                 $pubcomp = chr(PacketType::PUBCOMP->value << 4) . chr(2) . pack('n', $pid);
                 $this->logger->debug('>> PUBCOMP', ['packetId' => $pid]);
-                $this->transport->write($pubcomp);
+                $this->trackWrite($pubcomp);
                 $this->touchActivity();
                 // Deliver stored message if pending
                 if (isset($this->qos2InboundPending[$pid])) {
@@ -797,7 +879,7 @@ final class Client implements ClientInterface
                 // Send PUBREL response (flags 0x02)
                 $pubrel = chr((PacketType::PUBREL->value << 4) | 0x02) . chr(2) . pack('n', $pid);
                 $this->logger->debug('>> PUBREL', ['packetId' => $pid]);
-                $this->transport->write($pubrel);
+                $this->trackWrite($pubrel);
                 $this->touchActivity();
 
                 return true;

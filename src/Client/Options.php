@@ -16,7 +16,7 @@ use function max;
 final class Options
 {
     /**
-     * @param  array<string, mixed>|null  $tlsOptions
+     * @param  TlsOptions|array<string, mixed>|null  $tlsOptions  TlsOptions object or raw stream context array
      * @param  list<string>  $messageFilters
      */
     public function __construct(
@@ -29,7 +29,7 @@ final class Options
         public ?string $password = null,
         public MqttVersion $version = MqttVersion::V3_1_1,
         public bool $useTls = false,
-        public ?array $tlsOptions = null,
+        public TlsOptions|array|null $tlsOptions = null,
         public ?WillOptions $will = null,
         // MQTT 5 session expiry (CONNECT property). Null = do not send property.
         public ?int $sessionExpiry = null,
@@ -52,6 +52,10 @@ final class Options
         public ?RateLimiter $rateLimiter = null,
         // Offline queue max size (0 = disabled, >0 = max buffered messages during disconnect)
         public int $offlineQueueSize = 0,
+        // Timeout for QoS 1/2 ACK wait in seconds (default 5.0)
+        public float $ackTimeout = 5.0,
+        // Number of resend attempts for unacknowledged QoS 1/2 messages (default 3)
+        public int $maxResendAttempts = 3,
     ) {
     }
 
@@ -118,13 +122,35 @@ final class Options
     }
 
     /**
-     * @param  array<string, mixed>|null  $options
+     * @param  TlsOptions|array<string, mixed>|null  $options  TlsOptions object or raw stream context array
      */
-    public function withTls(?array $options = null): self
+    public function withTls(TlsOptions|array|null $options = null): self
     {
         $c             = clone $this;
         $c->useTls     = true;
         $c->tlsOptions = $options;
+
+        return $c;
+    }
+
+    /**
+     * Timeout in seconds for waiting on QoS 1/2 acknowledgments before resending.
+     */
+    public function withAckTimeout(float $seconds): self
+    {
+        $c             = clone $this;
+        $c->ackTimeout = max(0.1, $seconds);
+
+        return $c;
+    }
+
+    /**
+     * Maximum number of resend attempts for unacknowledged QoS 1/2 messages.
+     */
+    public function withMaxResendAttempts(int $attempts): self
+    {
+        $c                    = clone $this;
+        $c->maxResendAttempts = max(0, $attempts);
 
         return $c;
     }

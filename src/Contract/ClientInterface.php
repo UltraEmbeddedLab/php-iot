@@ -68,4 +68,10 @@ interface ClientInterface
 
     /** Optional convenience loop. */
     public function run(callable $onMessage, ?float $idleSleep = 0.01): void;
+
+    /** Total bytes sent to the broker across all connections. */
+    public function bytesSent(): int;
+
+    /** Total bytes received from the broker across all connections. */
+    public function bytesReceived(): int;
 }

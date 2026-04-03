@@ -27,12 +27,12 @@
     "ext-openssl": "Required for TLS/SSL connections"
   },
   "require-dev": {
-    "pestphp/pest": "^v4.3.1",
+    "pestphp/pest": "^v4.4.3",
     "pestphp/pest-plugin-type-coverage": "^v4.0.3",
-    "phpstan/phpstan": "^2.1.33",
-    "laravel/pint": "^v1.27.0",
-    "rector/rector": "^2.3.1",
-    "symfony/var-dumper": "^v7.4.3",
+    "phpstan/phpstan": "^2.1.46",
+    "laravel/pint": "^v1.29.0",
+    "rector/rector": "^2.3.9",
+    "symfony/var-dumper": "^v7.4.8",
     "vlucas/phpdotenv": "^v5.6.3"
   },
   "autoload": {
