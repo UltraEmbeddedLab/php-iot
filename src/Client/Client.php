@@ -109,7 +109,7 @@ final class Client implements ClientInterface
     /** @var array<int, float> Recently seen QoS1 Packet Identifiers for de-duplication */
     private array $qos1Seen = [];
 
-    private int $qos1SeenMax = 256;
+    private int $qos1SeenMax;
 
     /** MQTT 5.0 Topic Alias Manager for bandwidth optimization */
     private ?TopicAliasManager $topicAliasManager = null;
@@ -157,13 +157,10 @@ final class Client implements ClientInterface
         }
     }
 
-    public function __construct(private readonly Options $options, private readonly TransportInterface $transport, ?EncoderInterface $enc = null, ?DecoderInterface $dec = null, private readonly LoggerInterface $logger = new NullLogger(), private readonly ?EventDispatcherInterface $events = null, private readonly ?MetricsInterface $metrics = null)
+    public function __construct(private readonly Options $options, private readonly TransportInterface $transport, private readonly LoggerInterface $logger = new NullLogger(), private readonly ?EventDispatcherInterface $events = null, private readonly ?MetricsInterface $metrics = null)
     {
         $this->inbound = new SplQueue();
-        if ($enc && $dec) {
-            $this->encoder = $enc;
-            $this->decoder = $dec;
-        } elseif ($this->options->version === MqttVersion::V5_0) {
+        if ($this->options->version === MqttVersion::V5_0) {
             // Choose by protocol version
             $this->encoder = new V5Encoder();
             $this->decoder = new V5Decoder();
@@ -356,14 +353,14 @@ final class Client implements ClientInterface
             if ($this->offlineQueue->enqueue($topic, $payload, $options)) {
                 $this->logger->debug('Message queued offline', ['topic' => $topic, 'queued' => $this->offlineQueue->count()]);
                 if ($this->metrics instanceof MetricsInterface) {
-                    $this->metrics->increment('offline_queue_enqueued', 1.0, []);
+                    $this->metrics->increment('offline_queue_enqueued');
                 }
 
                 return 0;
             }
             $this->logger->warning('Offline queue full, message dropped', ['topic' => $topic]);
             if ($this->metrics instanceof MetricsInterface) {
-                $this->metrics->increment('offline_queue_dropped', 1.0, []);
+                $this->metrics->increment('offline_queue_dropped');
             }
 
             return 0;
@@ -374,7 +371,7 @@ final class Client implements ClientInterface
         if ($rateLimiter instanceof RateLimiter) {
             $waited = $rateLimiter->acquire();
             if ($waited > 0 && $this->metrics instanceof MetricsInterface) {
-                $this->metrics->observe('rate_limit_wait_seconds', $waited, []);
+                $this->metrics->observe('rate_limit_wait_seconds', $waited);
             }
         }
 
@@ -528,7 +525,7 @@ final class Client implements ClientInterface
             $this->pingOutstanding = false;
             $this->logger->info('PINGRESP OK');
             if ($this->metrics instanceof MetricsInterface) {
-                $this->metrics->increment('pings', 1.0, []);
+                $this->metrics->increment('pings');
             }
 
             return true;
@@ -573,13 +570,13 @@ final class Client implements ClientInterface
                 unset($this->lastSubAck);
                 $this->logger->info('SUBACK', ['packetId' => $pid, 'codes' => $subAck->returnCodes]);
 
-                // Record subscriptions if this is a user-initiated subscribed (avoid duplicate records during resubscribe)
+                // Record subscriptions if this is a user-initiated subscription (avoid duplicate records during resubscribe)
                 if (! $this->isResubscribing) {
                     $this->recordSubscriptionsFromFilters($filters, $options);
                 }
 
                 if ($this->metrics instanceof MetricsInterface) {
-                    $this->metrics->increment('subscriptions', (float) count($filters), []);
+                    $this->metrics->increment('subscriptions', (float) count($filters));
                 }
 
                 return new SubscribeResult($pid, $subAck->returnCodes, $subAck);
@@ -626,7 +623,7 @@ final class Client implements ClientInterface
                 $this->removeSubscriptions($filters);
 
                 if ($this->metrics instanceof MetricsInterface) {
-                    $this->metrics->increment('unsubscriptions', (float) count($filters), []);
+                    $this->metrics->increment('unsubscriptions', (float) count($filters));
                 }
 
                 return;
@@ -996,7 +993,7 @@ final class Client implements ClientInterface
         try {
             $this->logger->info('Attempting reconnect', ['attempt' => $this->reconnectAttempts + 1]);
             if ($this->metrics instanceof MetricsInterface) {
-                $this->metrics->increment('reconnect_attempts', 1.0, []);
+                $this->metrics->increment('reconnect_attempts');
             }
             $this->connect();
             $this->reconnectAttempts = 0;
@@ -1081,7 +1078,7 @@ final class Client implements ClientInterface
      */
     private function topicMatchesAny(string $topic, array $filters): bool
     {
-        return array_any($filters, fn ($filter): bool => $this->topicMatchesFilter($topic, (string)$filter));
+        return array_any($filters, fn (string $filter): bool => $this->topicMatchesFilter($topic, $filter));
 
     }
 
@@ -1116,13 +1113,20 @@ final class Client implements ClientInterface
         return $ti === $tn && $fi === $fn;
     }
 
+    private function sessionStore(): ?SessionStoreInterface
+    {
+        $store = $this->options->sessionStore ?? null;
+
+        return $store instanceof SessionStoreInterface ? $store : null;
+    }
+
     /**
      * Save session state to the configured session store.
      */
     private function saveSession(string $clientId): void
     {
-        $store = $this->options->sessionStore;
-        if (!$store instanceof SessionStoreInterface) {
+        $store = $this->sessionStore();
+        if ($store === null) {
             return;
         }
 
@@ -1151,8 +1155,8 @@ final class Client implements ClientInterface
      */
     private function restoreSession(string $clientId): void
     {
-        $store = $this->options->sessionStore;
-        if (!$store instanceof SessionStoreInterface) {
+        $store = $this->sessionStore();
+        if ($store === null) {
             return;
         }
 
@@ -1203,7 +1207,7 @@ final class Client implements ClientInterface
         if ($drained > 0) {
             $this->logger->info('Drained offline queue', ['count' => $drained]);
             if ($this->metrics instanceof MetricsInterface) {
-                $this->metrics->increment('offline_queue_drained', (float) $drained, []);
+                $this->metrics->increment('offline_queue_drained', (float) $drained);
             }
         }
     }
