@@ -22,17 +22,17 @@ use ScienceStories\Mqtt\Protocol\QoS;
  * - QoS 2 (Exactly once): Assured delivery with four-step handshake (PUBREC, PUBREL, PUBCOMP)
  *
  * Flags:
- * - retain: If true, broker stores message as last known good value for the topic
- * - dup: Duplicate delivery flag (set automatically on QoS 1/2 retransmissions)
+ * - Retain: If true, broker stores message as last known good value for the topic
+ * - Dup: Duplicate delivery flag (set automatically on QoS 1/2 retransmissions)
  *
  * MQTT 5.0 Properties:
- * - payload_format_indicator: Indicates if payload is UTF-8 text (1) or binary (0)
- * - message_expiry_interval: Lifetime of message in seconds (expires if not delivered)
- * - topic_alias: Integer representing topic name to reduce packet size
- * - response_topic: Topic name for request/response pattern
- * - correlation_data: Binary data to correlate request and response messages
- * - user_properties: Custom key-value pairs for application metadata
- * - content_type: MIME type describing the payload format (e.g., "application/json")
+ * - Payload_format_indicator: Indicates if payload is UTF-8 text (1) or binary (0)
+ * - Message_expiry_interval: Lifetime of message in seconds (expires if not delivered)
+ * - Topic_alias: Integer representing topic name to reduce packet size
+ * - Response_topic: Topic name for request/response pattern
+ * - Correlation_data: Binary data to correlate request and response messages
+ * - User_properties: Custom key-value pairs for application metadata
+ * - Content_type: MIME type describing the payload format (e.g., "application/json")
  *
  * Usage Examples:
  * ```php

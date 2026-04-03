@@ -24,7 +24,7 @@ use ScienceStories\Mqtt\Client\SubscribeOptions;
  *   * Multi-level wildcard (#): "home/#" matches all topics under "home/"
  *
  * QoS Levels (Requested):
- * - QoS 0 (At most once): No acknowledgment, fire and forget
+ * - QoS 0 (At most once): No acknowledgment, fire, and forget
  * - QoS 1 (At least once): Acknowledged delivery may receive duplicates
  * - QoS 2 (Exactly once): Assured delivery, no duplicates
  * Note: The broker may grant a lower QoS than requested (returned in SUBACK)
@@ -38,8 +38,8 @@ use ScienceStories\Mqtt\Client\SubscribeOptions;
  *   * 2: Don't send retained messages at subscription time
  *
  * MQTT 5.0 Properties:
- * - subscription_identifier: Variable Byte Integer (1-268,435,455) to identify the subscription
- * - user_properties: Custom key-value pairs for application metadata
+ * - Subscription_identifier: Variable Byte Integer (1-268,435,455) to identify the subscription
+ * - User_properties: Custom key-value pairs for application metadata
  *
  * Usage Examples:
  * ```php

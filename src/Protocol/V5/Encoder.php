@@ -319,7 +319,7 @@ final class Encoder implements EncoderInterface
         // Payload: List of topic filters (UTF-8 strings)
         $payload = '';
         foreach ($filters as $filter) {
-            $f = (string) $filter;
+            $f = $filter;
             if ($f === '') {
                 continue;
             }
@@ -338,13 +338,13 @@ final class Encoder implements EncoderInterface
     /**
      * Build properties for MQTT 5 PUBLISH from a normalized map.
      * Supported keys:
-     *  - payload_format_indicator: 0|1|bool
-     *  - message_expiry_interval: int (u32)
-     *  - topic_alias: int (u16)
-     *  - response_topic: string
-     *  - correlation_data: string (binary)
+     *  - Payload_format_indicator: 0|1|bool
+     *  - Message_expiry_interval: int (u32)
+     *  - Topic_alias: int (u16)
+     *  - Response_topic: string
+     *  - Correlation_data: string (binary)
      *  - user_properties: array<string,string>|list<array{0:string,1:string}>|list<array{key:string,value:string}>
-     *  - content_type: string
+     *  - Content_type: string
      */
     /**
      * @param  array<string,mixed>|null  $properties

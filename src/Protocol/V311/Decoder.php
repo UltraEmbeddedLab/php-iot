@@ -32,7 +32,7 @@ use function strlen;
 final class Decoder implements DecoderInterface
 {
     /**
-     * Decode bytes of a CONNACK packet body (variable header + payload).
+     * Decode bytes of a CONNACK packet body (variable header and payload).
      * Caller should pass only the remaining bytes after fixed header.
      */
     public function decodeConnAck(string $packetBody): ConnAck

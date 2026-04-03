@@ -134,7 +134,7 @@ enum ReasonCode: int
     public function toException(?string $context = null): MqttException
     {
         $message = $context !== null
-            ? "{$context}: {$this->description()} (0x" . dechex($this->value) . ')'
+            ? "$context: {$this->description()} (0x" . dechex($this->value) . ')'
             : "{$this->description()} (0x" . dechex($this->value) . ')';
 
         return match ($this) {
@@ -160,7 +160,7 @@ enum ReasonCode: int
             self::TopicNameInvalid,
             self::TopicAliasInvalid,
             self::PacketTooLarge,
-            self::PayloadFormatInvalid => new \ScienceStories\Mqtt\Exception\ProtocolError($message, $this->value),
+            self::PayloadFormatInvalid => new ProtocolError($message, $this->value),
 
             default => new MqttException($message, $this->value),
         };

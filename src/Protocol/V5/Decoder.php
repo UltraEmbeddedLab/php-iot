@@ -35,9 +35,9 @@ final class Decoder implements DecoderInterface
     /**
      * Decode bytes of a CONNACK packet body for v5.
      * Body layout (v5):
-     *  - byte1: Acknowledge Flags (bit0 = session present)
-     *  - byte2: Reason Code
-     *  - properties: VarInt length + properties (ignored in MVP)
+     *  - Byte1: Acknowledge Flags (bit0 = session present)
+     *  - Byte2: Reason Code
+     *  - Properties: VarInt length and properties (ignored in MVP)
      */
     public function decodeConnAck(string $packetBody): ConnAck
     {
@@ -70,20 +70,20 @@ final class Decoder implements DecoderInterface
     /**
      * Parse a subset of MQTT 5 CONNACK properties into an associative array.
      * Recognized keys:
-     *  - assigned_client_identifier (0x12) string
-     *  - server_keep_alive (0x13) u16
-     *  - receive_maximum (0x21) u16
-     *  - topic_alias_maximum (0x22) u16
-     *  - maximum_qos (0x24) byte
-     *  - retain_available (0x25) byte
-     *  - maximum_packet_size (0x27) u32
-     *  - wildcard_subscription_available (0x28) byte
-     *  - subscription_identifier_available (0x29) byte
-     *  - shared_subscription_available (0x2A) byte
-     *  - response_information (0x1A) string
-     *  - reason_string (0x1F) string
-     *  - server_reference (0x1C) string
-     *  - user_properties (0x26) map<string,string>
+     *  - Assigned_client_identifier (0x12) string
+     *  - Server_keep_alive (0x13) u16
+     *  - Receive_maximum (0x21) u16
+     *  - Topic_alias_maximum (0x22) u16
+     *  - Maximum_qos (0x24) byte
+     *  - Retain_available (0x25) byte
+     *  - Maximum_packet_size (0x27) u32
+     *  - Wildcard_subscription_available (0x28) byte
+     *  - Subscription_identifier_available (0x29) byte
+     *  - Shared_subscription_available (0x2A) byte
+     *  - Response_information (0x1A) string
+     *  - Reason_string (0x1F) string
+     *  - Server_reference (0x1C) string
+     *  - User_properties (0x26) map<string,string>
      *
      * @return array<string, mixed>
      */
@@ -240,7 +240,7 @@ final class Decoder implements DecoderInterface
      *
      * MQTT 5.0 SUBACK structure:
      * - Packet Identifier (2 bytes)
-     * - Properties (varint length + properties)
+     * - Properties (varint length and properties)
      *   * reason_string (0x1F): string
      *   * user_properties (0x26): key-value pairs
      * - Reason codes (1 byte per subscription)
@@ -334,7 +334,7 @@ final class Decoder implements DecoderInterface
      *
      * MQTT 5.0 UNSUBACK structure:
      * - Packet Identifier (2 bytes)
-     * - Properties (varint length + properties)
+     * - Properties (varint length and properties)
      *   * reason_string (0x1F): string
      *   * user_properties (0x26): key-value pairs
      * - Reason codes (1 byte per unsubscribed topic filter)
@@ -480,11 +480,11 @@ final class Decoder implements DecoderInterface
     private function decodeQoSAck(string $packetBody, string $packetName): array
     {
         if (strlen($packetBody) < 2) {
-            throw new ProtocolError("{$packetName} too short");
+            throw new ProtocolError("$packetName too short");
         }
         $arr = unpack('n', substr($packetBody, 0, 2));
         if ($arr === false || ! isset($arr[1]) || ! is_int($arr[1])) {
-            throw new ProtocolError("{$packetName} malformed packet id");
+            throw new ProtocolError("$packetName malformed packet id");
         }
         $pid = $arr[1];
 
@@ -502,7 +502,7 @@ final class Decoder implements DecoderInterface
             $propLen  = Bytes::decodeVarInt($rest, $consumed);
             $offset += $consumed;
             if ($offset + $propLen > strlen($packetBody)) {
-                throw new ProtocolError("{$packetName} properties truncated");
+                throw new ProtocolError("$packetName properties truncated");
             }
             $propsRaw = substr($packetBody, $offset, $propLen);
             $propsMap = $propLen > 0 ? $this->parseAckProperties($propsRaw) : null;
@@ -516,7 +516,7 @@ final class Decoder implements DecoderInterface
      *
      * Structure:
      * - Reason Code (1 byte) - optional, defaults to 0x00 if omitted
-     * - Properties (varint length + data) - optional
+     * - Properties (varint length and data) - optional
      *
      * Note: MQTT 5.0 allows servers to send DISCONNECT to clients with
      * reason codes explaining why the connection is being closed.
@@ -552,10 +552,10 @@ final class Decoder implements DecoderInterface
     /**
      * Parse MQTT 5.0 DISCONNECT properties.
      * Recognized keys:
-     *  - session_expiry_interval (0x11): u32
-     *  - reason_string (0x1F): string
-     *  - user_properties (0x26): array<string,string>
-     *  - server_reference (0x1C): string
+     *  - Session_expiry_interval (0x11): u32
+     *  - Reason_string (0x1F): string
+     *  - User_properties (0x26): array<string,string>
+     *  - Server_reference (0x1C): string
      *
      * @return array<string, mixed>
      */

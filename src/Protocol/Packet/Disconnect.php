@@ -57,10 +57,10 @@ use function is_string;
  * - 0xA2 (162): Wildcard Subscriptions not supported
  *
  * MQTT 5.0 Properties:
- * - session_expiry_interval: u32 (seconds until session expires after disconnect)
- * - reason_string: string (human-readable reason for disconnect)
- * - user_properties: array<string, string> (custom metadata)
- * - server_reference: string (alternative server to connect to)
+ * - Session_expiry_interval: u32 (seconds until session expires after disconnect)
+ * - Reason_string: string (human-readable reason for disconnect)
+ * - User_properties: array<string, string> (custom metadata)
+ * - Server_reference: string (alternative server to connect to)
  *
  * Usage Examples:
  * ```php

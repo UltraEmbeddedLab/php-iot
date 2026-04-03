@@ -15,7 +15,7 @@ use function count;
  * MQTT 5.0 Topic Alias Behavior:
  * - The broker advertises topic_alias_maximum in CONNACK
  * - Client can assign aliases from 1 to topic_alias_maximum
- * - First publish with topic + alias establishes the mapping
+ * - First publish with topic and alias establishes the mapping
  * - Subsequent publishes can use alias only (empty topic)
  * - Aliases are connection-scoped and reset on reconnect
  *
@@ -51,7 +51,7 @@ final class TopicAliasManager
      *                        Use 0 to disable topic aliases.
      */
     public function __construct(
-        public private(set) int $maxAliases = 0 {
+        private(set) int $maxAliases = 0 {
             set => max(0, $value);
         },
     ) {

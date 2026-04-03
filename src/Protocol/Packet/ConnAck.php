@@ -14,7 +14,7 @@ use function is_string;
  * CONNACK packet model for MQTT 3.1.1 and 5.0.
  *
  * This class represents the broker's response to a CONNECT packet, containing:
- * - a Session Present flag: indicates if a previous session is being resumed
+ * - A Session Present flag: indicates if a previous session is being resumed
  * - Return/Reason Code: indicates connection success or failure reason
  * - Properties (MQTT 5.0 only): additional broker capabilities and settings
  *

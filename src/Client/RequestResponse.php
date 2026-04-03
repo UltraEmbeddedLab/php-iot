@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace ScienceStories\Mqtt\Client;
 
+use Random\RandomException;
 use ScienceStories\Mqtt\Contract\ClientInterface;
 use ScienceStories\Mqtt\Exception\Timeout;
 use ScienceStories\Mqtt\Protocol\QoS;
@@ -39,12 +40,13 @@ final class RequestResponse
     /**
      * Send a request and wait for a correlated response.
      *
-     * @param string     $topic      The request topic
-     * @param string     $payload    The request payload
-     * @param float      $timeoutSec Maximum time to wait for response
+     * @param string $topic The request topic
+     * @param string $payload The request payload
+     * @param float $timeoutSec Maximum time to wait for response
      * @param array<string, mixed>|null $properties Additional MQTT 5.0 properties
      *
      * @throws Timeout if no response received within timeout
+     * @throws RandomException
      */
     public function request(
         string $topic,
@@ -77,7 +79,7 @@ final class RequestResponse
         while (true) {
             $remaining = $deadline - microtime(true);
             if ($remaining <= 0) {
-                throw new Timeout("Request/Response timed out waiting for response on '{$this->responseTopic}' with correlation '{$correlationData}'");
+                throw new Timeout("Request/Response timed out waiting for response on '$this->responseTopic' with correlation '$correlationData'");
             }
 
             $msg = $this->client->awaitMessage($remaining);

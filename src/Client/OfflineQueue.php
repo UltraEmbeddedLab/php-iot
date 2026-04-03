@@ -79,9 +79,4 @@ final class OfflineQueue
         }
         $this->count = 0;
     }
-
-    public function isFull(): bool
-    {
-        return $this->maxSize > 0 && $this->count >= $this->maxSize;
-    }
 }

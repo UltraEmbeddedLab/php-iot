@@ -28,12 +28,12 @@ namespace ScienceStories\Mqtt\Protocol\Packet;
  * - Packet Identifier is required to track the UNSUBACK response
  *
  * MQTT 5.0 Properties:
- * - user_properties: Custom key-value pairs for application metadata
+ * - User_properties: Custom key-value pairs for application metadata
  *
  * UNSUBACK Response:
  * The broker responds with an UNSUBACK packet containing:
  * - MQTT 3.1.1: Packet Identifier only (implicit success)
- * - MQTT 5.0: Packet Identifier + reason codes per topic filter
+ * - MQTT 5.0: Packet Identifier and reason codes per topic filter
  *   * 0x00: Success - subscription deleted
  *   * 0x11: No subscription existed
  *   * 0x80+: Various error codes
@@ -80,7 +80,7 @@ namespace ScienceStories\Mqtt\Protocol\Packet;
  *
  * MQTT 5.0:
  * - Fixed Header: Type (10), reserved flags (0x02), Remaining Length
- * - Variable Header: Packet Identifier (2 bytes) + Properties (varint length + data)
+ * - Variable Header: Packet Identifier (2 bytes) + Properties (varint length and data)
  * - Payload: List of topic filters (UTF-8 strings)
  *
  * Comparison with SUBSCRIBE:

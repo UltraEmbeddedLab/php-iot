@@ -43,8 +43,8 @@ use function is_string;
  * - 0x99 (153): Payload format invalid
  *
  * MQTT 5.0 Properties:
- * - reason_string: Human-readable error explanation
- * - user_properties: Custom key-value pairs for application metadata
+ * - Reason_string: Human-readable error explanation
+ * - User_properties: Custom key-value pairs for application metadata
  */
 final class PubRec
 {

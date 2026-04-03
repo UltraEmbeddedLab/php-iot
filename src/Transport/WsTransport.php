@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace ScienceStories\Mqtt\Transport;
 
+use Random\RandomException;
 use ScienceStories\Mqtt\Contract\TransportInterface;
 use ScienceStories\Mqtt\Exception\Timeout;
 use ScienceStories\Mqtt\Exception\TransportError;
@@ -49,7 +50,7 @@ use function usleep;
  *
  * Supports:
  * - ws:// (plain WebSocket)
- * - wss:// (WebSocket over TLS)
+ * - Wss:// (WebSocket over TLS)
  * - Custom URI paths (default: /mqtt)
  * - Fragmented message reassembly
  * - Ping/pong keepalive frames
@@ -82,6 +83,9 @@ final class WsTransport implements TransportInterface
     ) {
     }
 
+    /**
+     * @throws RandomException
+     */
     public function open(string $host, int $port, float $timeoutSec = 5.0): void
     {
         $this->close();
@@ -117,6 +121,9 @@ final class WsTransport implements TransportInterface
         $this->performHandshake($host, $port);
     }
 
+    /**
+     * @throws RandomException
+     */
     public function write(string $bytes): int
     {
         if (!$this->isOpen()) {
@@ -128,6 +135,9 @@ final class WsTransport implements TransportInterface
         return $this->rawWrite($frame);
     }
 
+    /**
+     * @throws RandomException
+     */
     public function readExact(int $length, ?float $timeoutSec = null): string
     {
         if ($length < 0) {
@@ -240,15 +250,18 @@ final class WsTransport implements TransportInterface
         $this->tlsEnabled = true;
     }
 
+    /**
+     * @throws RandomException
+     */
     private function performHandshake(string $host, int $port): void
     {
         $key = base64_encode(random_bytes(16));
 
-        $request = "GET {$this->path} HTTP/1.1\r\n"
-            . "Host: {$host}:{$port}\r\n"
+        $request = "GET $this->path HTTP/1.1\r\n"
+            . "Host: $host:$port\r\n"
             . "Upgrade: websocket\r\n"
             . "Connection: Upgrade\r\n"
-            . "Sec-WebSocket-Key: {$key}\r\n"
+            . "Sec-WebSocket-Key: $key\r\n"
             . "Sec-WebSocket-Version: 13\r\n"
             . "Sec-WebSocket-Protocol: mqtt\r\n"
             . "\r\n";
@@ -270,7 +283,7 @@ final class WsTransport implements TransportInterface
         $lines      = explode("\r\n", $response);
         $statusLine = $lines[0];
         if (!str_contains($statusLine, '101')) {
-            throw new TransportError("WebSocket: Handshake failed: {$statusLine}");
+            throw new TransportError("WebSocket: Handshake failed: $statusLine");
         }
 
         // Verify Sec-WebSocket-Accept
@@ -295,6 +308,7 @@ final class WsTransport implements TransportInterface
 
     /**
      * Encode data into a WebSocket frame (client-to-server, always masked).
+     * @throws RandomException
      */
     private function encodeFrame(string $payload, int $opcode): string
     {
@@ -325,6 +339,7 @@ final class WsTransport implements TransportInterface
     /**
      * Read and decode a single WebSocket frame, returning the payload for binary frames.
      * Handles ping/pong/close control frames transparently.
+     * @throws RandomException
      */
     private function readFrame(?float $deadline): ?string
     {
@@ -398,6 +413,9 @@ final class WsTransport implements TransportInterface
         };
     }
 
+    /**
+     * @throws RandomException
+     */
     private function handlePing(string $payload): null
     {
         // Respond with pong

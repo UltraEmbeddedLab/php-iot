@@ -32,7 +32,7 @@ namespace ScienceStories\Mqtt\Client;
 final class FlowControl
 {
     /** @var int Current count of in-flight messages */
-    public private(set) int $currentInFlight = 0;
+    private(set) int $currentInFlight = 0;
 
     /** @var array<int, float> Packet ID => timestamp of tracked messages */
     private array $pending = [];
@@ -42,7 +42,7 @@ final class FlowControl
      *                         Default 65535 per MQTT 5.0 spec.
      */
     public function __construct(
-        public private(set) int $maxInFlight = 65535 {
+        private(set) int $maxInFlight = 65535 {
             set => max(1, min($value, 65535));
         },
     ) {

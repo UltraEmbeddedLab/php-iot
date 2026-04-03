@@ -210,7 +210,7 @@ final class Encoder implements EncoderInterface
         // Payload: List of topic filters (UTF-8 strings)
         $payload = '';
         foreach ($filters as $filter) {
-            $f = (string) $filter;
+            $f = $filter;
             if ($f === '') {
                 continue;
             }

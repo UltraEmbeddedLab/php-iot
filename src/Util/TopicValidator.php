@@ -14,7 +14,7 @@ use function strlen;
  *
  * MQTT Topic Rules:
  * - Must not be empty (for PUBLISH topics)
- * - Must not exceed 65535 bytes (UTF-8 encoded)
+ * - Must not exceed 65,535 bytes (UTF-8 encoded)
  * - Must not contain null character (U+0000)
  * - PUBLISH topics must not contain wildcard characters (+ or #)
  * - SUBSCRIBE filters: + must occupy entire level, # must be last character

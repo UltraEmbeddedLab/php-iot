@@ -24,7 +24,7 @@ final class Bytes
     public static function encodeVarInt(int $value): string
     {
         if ($value < 0 || $value > 268_435_455) { // max 0x0FFFFFFF
-            throw new ProtocolError("VarInt out of range: {$value}");
+            throw new ProtocolError("VarInt out of range: $value");
         }
 
         $out = '';
@@ -74,7 +74,7 @@ final class Bytes
     }
 
     /**
-     * Encode an MQTT UTF-8 string (2-byte length prefix + UTF-8 bytes).
+     * Encode an MQTT UTF-8 string (2-byte length prefix and UTF-8 bytes).
      *
      * @throws ProtocolError if string too long
      */
@@ -82,7 +82,7 @@ final class Bytes
     {
         $len = strlen($value);
         if ($len > 65535) {
-            throw new ProtocolError("String too long: {$len} bytes");
+            throw new ProtocolError("String too long: $len bytes");
         }
 
         return pack('n', $len).$value;

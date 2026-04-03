@@ -46,7 +46,7 @@ use const LOCK_EX;
  * $store = new FileSessionStore('/var/mqtt/sessions');
  *
  * // Or with custom expiry (cleanup stale sessions)
- * $store = new FileSessionStore('/var/mqtt/sessions', 86400); // 24h expiry
+ * $store = new FileSessionStore('/var/mqtt/sessions', 86,400); // 24h expiry
  *
  * // Use with client options
  * $options = (new Options('broker.local'))
@@ -76,6 +76,9 @@ final readonly class FileSessionStore implements SessionStoreInterface
         $this->ensureDirectory();
     }
 
+    /**
+     * @throws JsonException
+     */
     public function save(string $clientId, SessionState $state): void
     {
         $path = $this->getPath($clientId);
@@ -83,7 +86,7 @@ final readonly class FileSessionStore implements SessionStoreInterface
 
         $written = file_put_contents($path, $data, LOCK_EX);
         if ($written === false) {
-            throw new RuntimeException("Failed to write session file: {$path}");
+            throw new RuntimeException("Failed to write session file: $path");
         }
     }
 
@@ -183,12 +186,12 @@ final readonly class FileSessionStore implements SessionStoreInterface
         if (! is_dir($this->directory)) {
             $created = mkdir($this->directory, 0755, true);
             if (! $created) {
-                throw new RuntimeException("Failed to create session directory: {$this->directory}");
+                throw new RuntimeException("Failed to create session directory: $this->directory");
             }
         }
 
         if (! is_writable($this->directory)) {
-            throw new RuntimeException("Session directory is not writable: {$this->directory}");
+            throw new RuntimeException("Session directory is not writable: $this->directory");
         }
     }
 

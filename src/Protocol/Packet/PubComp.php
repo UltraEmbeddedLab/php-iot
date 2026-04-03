@@ -39,8 +39,8 @@ use function is_string;
  * - 0x92 (146): Packet Identifier not found
  *
  * MQTT 5.0 Properties:
- * - reason_string: Human-readable explanation
- * - user_properties: Custom key-value pairs for application metadata
+ * - Reason_string: Human-readable explanation
+ * - User_properties: Custom key-value pairs for application metadata
  */
 final class PubComp
 {
