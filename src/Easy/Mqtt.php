@@ -11,6 +11,7 @@ use RuntimeException;
 use ScienceStories\Mqtt\Client\Client;
 use ScienceStories\Mqtt\Client\Options as ClientOptions;
 use ScienceStories\Mqtt\Client\PublishOptions;
+use ScienceStories\Mqtt\Client\TlsOptions;
 use ScienceStories\Mqtt\Contract\ClientInterface;
 use ScienceStories\Mqtt\Protocol\MqttVersion;
 use ScienceStories\Mqtt\Protocol\QoS;
@@ -26,7 +27,7 @@ final class Mqtt
      * Simplified API requiring only essential parameters.
      *
      * @param int|null $port MQTT port (defaults: 1883 for TCP, 8883 for TLS)
-     * @param array<string,mixed>|null $tlsOptions
+     * @param TlsOptions|array<string,mixed>|null $tlsOptions
      * @param array<string,mixed>|null $properties MQTT v5 publish properties
      * @throws RandomException
      */
@@ -41,7 +42,7 @@ final class Mqtt
         ?string $password = null,
         ?QoS $qos = null,
         bool $retain = false,
-        ?array $tlsOptions = null,
+        TlsOptions|array|null $tlsOptions = null,
         ?array $properties = null,
         ?string $clientId = null,
         int $keepAlive = 60,
@@ -89,7 +90,7 @@ final class Mqtt
      * One-shot send: connect, publish, disconnect.
      * Alias for publish() - kept for backward compatibility.
      *
-     * @param array<string,mixed>|null $tlsOptions
+     * @param TlsOptions|array<string,mixed>|null $tlsOptions
      * @param array<string,mixed>|null $properties MQTT v5 publish properties
      * @throws RandomException
      */
@@ -104,7 +105,7 @@ final class Mqtt
         ?string $password = null,
         ?QoS $qos = null,
         bool $retain = false,
-        ?array $tlsOptions = null,
+        TlsOptions|array|null $tlsOptions = null,
         ?array $properties = null,
         ?string $clientId = null,
         int $keepAlive = 60,
@@ -134,7 +135,7 @@ final class Mqtt
     /**
      * Connect and return a fully configured ClientInterface for longer sessions.
      *
-     * @param array<string,mixed>|null $tlsOptions
+     * @param TlsOptions|array<string,mixed>|null $tlsOptions
      * @throws RandomException
      */
     public static function connect(
@@ -144,7 +145,7 @@ final class Mqtt
         bool $tls = false,
         ?string $username = null,
         ?string $password = null,
-        ?array $tlsOptions = null,
+        TlsOptions|array|null $tlsOptions = null,
         ?string $clientId = null,
         int $keepAlive = 60,
         bool $cleanStart = true,
@@ -167,12 +168,7 @@ final class Mqtt
             $opts = $opts->withUser($username, $password);
         }
         if ($tls) {
-            $opts = $opts->withTls($tlsOptions ?? [
-                'ssl' => [
-                    'verify_peer'      => true,
-                    'verify_peer_name' => true,
-                ],
-            ]);
+            $opts = $opts->withTls($tlsOptions ?? new TlsOptions());
         }
 
         $client = new Client($opts, new TcpTransport(), logger: $logger ?? new NullLogger());
