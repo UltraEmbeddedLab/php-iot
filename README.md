@@ -11,13 +11,17 @@ Modern, production-grade MQTT 3.1.1 & 5.0 client for PHP 8.4+
 
 - **Modern PHP 8.4+** with strict types and modern syntax
 - **MQTT 3.1.1 & 5.0** protocol support
-- **TLS/SSL** encryption support
-- **Auto-reconnect** with exponential backoff
-- **QoS 0, 1, 2** support
+- **TLS/SSL & mutual TLS (mTLS)** with typed `TlsOptions` — client certificates, CA verification, ALPN
+- **WebSocket transport** (`ws://`, `wss://`) with RFC 6455 framing
+- **Auto-reconnect** with exponential backoff and jitter
+- **QoS 0, 1, 2** with automatic resend on ACK timeout
 - **Session persistence** for reliable message delivery
+- **Rate limiter** (token bucket) to prevent broker flooding
+- **Offline message queue** with automatic drain on reconnect
 - **Topic aliases** (MQTT 5.0)
 - **Flow control** (MQTT 5.0)
 - **Shared subscriptions** (MQTT 5.0)
+- **Byte counters** for traffic monitoring (`bytesSent()` / `bytesReceived()`)
 - **PSR-3** logging support
 - **PSR-14** event dispatcher support
 
@@ -161,6 +165,8 @@ $client->disconnect();
 | `cleanSession` | bool | true | Start with clean session |
 | `username` | string | null | Authentication username |
 | `password` | string | null | Authentication password |
+| `ackTimeout` | float | 5.0 | Timeout (seconds) waiting for QoS 1/2 ACK before resend |
+| `maxResendAttempts` | int | 3 | Max resend attempts for unacknowledged QoS 1/2 messages |
 
 ### Publish Options
 
@@ -172,17 +178,65 @@ $client->disconnect();
 
 ### TLS Configuration
 
+Simple TLS (server verification only):
+
 ```php
-$options = $options->withTls([
-    'ssl' => [
-        'verify_peer' => true,
-        'verify_peer_name' => true,
-        'cafile' => '/path/to/ca.crt',
-        'local_cert' => '/path/to/client.crt',
-        'local_pk' => '/path/to/client.key',
-    ],
-]);
+use ScienceStories\Mqtt\Client\TlsOptions;
+
+$options = $options->withTls(new TlsOptions());
 ```
+
+Mutual TLS with client certificate (AWS IoT, Azure IoT Hub):
+
+```php
+use ScienceStories\Mqtt\Client\TlsOptions;
+
+$tls = (new TlsOptions())
+    ->withCaFile('/etc/mqtt/certs/ca.pem')
+    ->withClientCertificate(
+        certFile: '/etc/mqtt/certs/client.pem',
+        keyFile: '/etc/mqtt/certs/client.key',
+        passphrase: 'optional-passphrase',
+    );
+
+$options = $options->withTls($tls);
+```
+
+MQTT over port 443 with ALPN (when 8883 is blocked):
+
+```php
+$tls = (new TlsOptions())
+    ->withCaFile('/etc/mqtt/certs/ca.pem')
+    ->withClientCertificate('/etc/mqtt/certs/client.pem', '/etc/mqtt/certs/client.key')
+    ->withAlpn('mqtt');
+
+$options = (new Options('broker.example.com', 443))->withTls($tls);
+```
+
+Self-signed certificates (development):
+
+```php
+$tls = (new TlsOptions())
+    ->withCaFile('/path/to/my-ca.pem')
+    ->withAllowSelfSigned(true);
+
+$options = $options->withTls($tls);
+```
+
+| TlsOptions Method | Description |
+|---|---|
+| `withCaFile(?string)` | CA certificate file for server verification |
+| `withCaPath(?string)` | Directory of CA certificates |
+| `withClientCertificate(?string, ?string, ?string)` | Client cert, key, and optional passphrase |
+| `withAlpn(?string)` | ALPN protocol (e.g., `'mqtt'` for port 443) |
+| `withVerifyPeer(bool)` | Verify server certificate (default: `true`) |
+| `withVerifyPeerName(bool)` | Verify server hostname (default: `true`) |
+| `withAllowSelfSigned(bool)` | Allow self-signed certs (default: `false`) |
+| `withPeerName(?string)` | Override peer name for SNI |
+| `withSni(bool)` | Enable/disable SNI (default: `true`) |
+
+> Legacy `array` syntax is still supported for backward compatibility:
+> `$options->withTls(['ssl' => ['verify_peer' => true]])`
 
 ## MQTT 5.0 Features
 
@@ -235,11 +289,11 @@ Detailed documentation is available in the `docs/` directory:
 
 Check the `examples/` directory for complete working examples:
 
-- Basic connect/publish/subscribe
-- MQTT 3.1.1 and 5.0 examples
-- QoS demonstrations
-- TLS connections
-- Advanced features
+- Basic connect/publish/subscribe (MQTT 3.1.1 and 5.0)
+- QoS 0, 1, 2 demonstrations
+- **mTLS with client certificates** (`tls_mtls_example.php` + cert generation script)
+- Session persistence, shared subscriptions, topic aliases
+- Flow control, server disconnect handling
 
 ## Testing
 

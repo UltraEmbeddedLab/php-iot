@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-04-04
+
+### Added
+- **TlsOptions value object**: Typed, immutable configuration for TLS/SSL connections replacing raw arrays. Supports mutual TLS (client certificates), CA verification, ALPN protocol negotiation, self-signed certificate allowance, and SNI control. Fully backward compatible — `Options::withTls()` accepts both `TlsOptions` and legacy arrays.
+- **Mutual TLS (mTLS)**: Client certificate authentication via `TlsOptions::withClientCertificate()` with support for separate cert/key files and optional passphrase. Enables secure device authentication for AWS IoT Core, Azure IoT Hub, and enterprise brokers.
+- **ALPN support**: `TlsOptions::withAlpn('mqtt')` for MQTT over port 443 when standard MQTT ports are blocked by firewalls.
+- **Byte counters**: `ClientInterface::bytesSent()` and `ClientInterface::bytesReceived()` for monitoring total traffic across all connections and reconnects.
+- **QoS 1/2 resend mechanism**: Automatic retransmission of unacknowledged PUBLISH messages with DUP flag. Configurable via `Options::withAckTimeout()` (default 5s) and `Options::withMaxResendAttempts()` (default 3).
+- **mTLS example**: `examples/tls_mtls_example.php` with self-signed certificate generation script and Mosquitto Docker configuration for local testing.
+- **TlsOptions test suite**: 14 unit tests covering immutability, builder methods, and `toStreamContext()` conversion.
+
+### Changed
+- `Options::withTls()` now accepts `TlsOptions|array|null` (union type) for typed TLS configuration while preserving backward compatibility with raw arrays.
+- `Easy\Mqtt::publish()`, `send()`, and `connect()` now accept `TlsOptions` in addition to arrays for the `$tlsOptions` parameter.
+- `Easy\Mqtt::connect()` defaults to `new TlsOptions()` (verify_peer + verify_peer_name enabled) instead of a raw array when no TLS options are provided.
+- `examples/config.php` now builds a `TlsOptions` object from environment variables, supporting `MQTT_TLS_CA_FILE`, `MQTT_TLS_CLIENT_CERT`, `MQTT_TLS_CLIENT_KEY`, `MQTT_TLS_CLIENT_KEY_PASSPHRASE`, `MQTT_TLS_VERIFY_PEER`, `MQTT_TLS_ALLOW_SELF_SIGNED`, and `MQTT_TLS_ALPN`.
+- All transport I/O in `Client` now routes through `trackWrite()`/`trackRead()` for byte counting.
+
 ## [1.2.0] - 2026-03-29
 
 ### Added
