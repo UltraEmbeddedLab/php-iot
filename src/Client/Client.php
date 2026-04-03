@@ -109,7 +109,7 @@ final class Client implements ClientInterface
     /** @var array<int, float> Recently seen QoS1 Packet Identifiers for de-duplication */
     private array $qos1Seen = [];
 
-    private int $qos1SeenMax;
+    private readonly int $qos1SeenMax;
 
     /** MQTT 5.0 Topic Alias Manager for bandwidth optimization */
     private ?TopicAliasManager $topicAliasManager = null;
@@ -1208,7 +1208,7 @@ final class Client implements ClientInterface
     private function saveSession(string $clientId): void
     {
         $store = $this->sessionStore();
-        if ($store === null) {
+        if (!$store instanceof \ScienceStories\Mqtt\Contract\SessionStoreInterface) {
             return;
         }
 
@@ -1238,7 +1238,7 @@ final class Client implements ClientInterface
     private function restoreSession(string $clientId): void
     {
         $store = $this->sessionStore();
-        if ($store === null) {
+        if (!$store instanceof \ScienceStories\Mqtt\Contract\SessionStoreInterface) {
             return;
         }
 

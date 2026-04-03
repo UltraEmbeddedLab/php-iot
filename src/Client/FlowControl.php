@@ -32,7 +32,7 @@ namespace ScienceStories\Mqtt\Client;
 final class FlowControl
 {
     /** @var int Current count of in-flight messages */
-    private(set) int $currentInFlight = 0;
+    public private(set) int $currentInFlight = 0;
 
     /** @var array<int, float> Packet ID => timestamp of tracked messages */
     private array $pending = [];

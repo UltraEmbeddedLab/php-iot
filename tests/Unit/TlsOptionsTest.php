@@ -77,7 +77,7 @@ test('withClientCertificate sets cert, key, and passphrase', function (): void {
 });
 
 test('withClientCertificate with null key file', function (): void {
-    $tls = (new TlsOptions())->withClientCertificate('/combined.pem');
+    $tls = new TlsOptions()->withClientCertificate('/combined.pem');
 
     expect($tls->clientCertificateFile)->toBe('/combined.pem')
         ->and($tls->clientCertificateKeyFile)->toBeNull()
@@ -112,7 +112,7 @@ test('withSni returns new instance', function (): void {
 });
 
 test('toStreamContext with defaults', function (): void {
-    $ctx = (new TlsOptions())->toStreamContext();
+    $ctx = new TlsOptions()->toStreamContext();
 
     expect($ctx)->toHaveKey('ssl')
         ->and($ctx['ssl']['verify_peer'])->toBeTrue()
@@ -125,7 +125,7 @@ test('toStreamContext with defaults', function (): void {
 });
 
 test('toStreamContext with full mTLS config', function (): void {
-    $tls = (new TlsOptions())
+    $tls = new TlsOptions()
         ->withCaFile('/ca.pem')
         ->withCaPath('/certs')
         ->withClientCertificate('/client.pem', '/client-key.pem', 'pass123')
