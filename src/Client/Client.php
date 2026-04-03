@@ -291,7 +291,7 @@ final class Client implements ClientInterface
 
         if ($this->metrics instanceof MetricsInterface) {
             $this->metrics->increment('connections', 1.0, ['version' => $versionStr]);
-            $this->metrics->observe('connect_duration_seconds', microtime(true) - $connectStart, []);
+            $this->metrics->observe('connect_duration_seconds', microtime(true) - $connectStart);
         }
 
         // Drain offline queue after successful connect
